@@ -204,7 +204,7 @@ class Wpfa_Mailconnect_SMTP {
         $host   = isset( $options['smtp_host'] ) ? $options['smtp_host'] : 'localhost';
         $port   = isset( $options['smtp_port'] ) ? (int) $options['smtp_port'] : 25;
         $secure = isset( $options['smtp_secure'] ) ? $options['smtp_secure'] : '';
-        $auth   = isset( $options['smtp_auth'] ) ? (bool) $options['smtp_auth'] : false;
+        $auth   = isset( $options['smtp_auth'] ) ? $options['smtp_auth'] === '1' : false;
         $from   = isset( $options['smtp_from'] ) ? $options['smtp_from'] : get_option( 'admin_email' );
         $name   = isset( $options['smtp_name'] ) ? $options['smtp_name'] : get_bloginfo( 'name' );
 
