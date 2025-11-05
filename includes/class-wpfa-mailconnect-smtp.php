@@ -81,7 +81,12 @@ class Wpfa_Mailconnect_SMTP {
     public function render_field( $args ) {
         $options = get_option( 'smtp_options', array() );
         $id = sanitize_key( $args['id'] );
-        $value = isset( $options[ $id ] ) ? $options[ $id ] : $args['default'];
+        if ( isset( $args['type'] ) && 'password' === $args['type'] ) {
+            // Always leave password blank by default for security
+            $value = isset( $options[ $id ] ) ? $options[ $id ] : '';
+        } else {
+            $value = isset( $options[ $id ] ) ? $options[ $id ] : $args['default'];
+        }
 
         if ( isset( $args['type'] ) && 'select' === $args['type'] ) {
             echo '<select id="' . esc_attr( $id ) . '" name="smtp_options[' . esc_attr( $id ) . ']">';
