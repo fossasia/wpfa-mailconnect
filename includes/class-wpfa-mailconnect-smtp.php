@@ -208,8 +208,12 @@ class Wpfa_Mailconnect_SMTP {
         $pass   = isset( $options['smtp_pass'] ) ? $options['smtp_pass'] : '';
         $host   = isset( $options['smtp_host'] ) ? $options['smtp_host'] : 'localhost';
         $port   = isset( $options['smtp_port'] ) ? (int) $options['smtp_port'] : 25;
+        // Validate port range (1-65535)
+        if ( $port < 1 || $port > 65535 ) {
+            $port = 25; // fallback to default SMTP port
+        }
         $secure = isset( $options['smtp_secure'] ) ? $options['smtp_secure'] : '';
-        $auth   = isset( $options['smtp_auth'] ) ? $options['smtp_auth'] === '1' : false;
+        $auth   = isset( $options['smtp_auth'] ) ? (bool) $options['smtp_auth'] : false;
         $from   = isset( $options['smtp_from'] ) ? $options['smtp_from'] : get_option( 'admin_email' );
         $name   = isset( $options['smtp_name'] ) ? $options['smtp_name'] : get_bloginfo( 'name' );
 
