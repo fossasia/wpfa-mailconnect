@@ -262,7 +262,7 @@ class Wpfa_Mailconnect_SMTP {
             global $phpmailer;
             $error_message = 'Failed to send test email. ';
             if ( ! empty( $phpmailer->ErrorInfo ) ) {
-                $error_message .= 'PHPMailer Error: ' . $phpmailer->ErrorInfo;
+                $error_message .= 'PHPMailer Error: ' . esc_html( $phpmailer->ErrorInfo );
             } else {
                 $error_message .= 'Check your credentials, host, and port settings.';
             }
