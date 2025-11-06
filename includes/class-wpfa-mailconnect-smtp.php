@@ -163,7 +163,7 @@ class Wpfa_Mailconnect_SMTP {
 
     public function handle_test_email() {
         if ( ! current_user_can( 'manage_options' ) ) {
-            wp_die( 'Cheatin&#8217; huh?' );
+            wp_die( 'Unauthorized access. You do not have permission to perform this action.' );
         }
         if ( ! isset( $_POST['smtp_nonce_field'] ) || ! wp_verify_nonce( $_POST['smtp_nonce_field'], 'smtp_test_email_nonce' ) ) {
             wp_die( 'Security check failed.' );
