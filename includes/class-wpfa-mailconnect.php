@@ -57,7 +57,13 @@ class Wpfa_Mailconnect {
 	 */
 	protected $version;
 
-	// new smtp property
+	/**
+	 * SMTP configuration manager instance.
+	 *
+	 * @since    1.0.0
+	 * @access   protected
+	 * @var      Wpfa_Mailconnect_SMTP    $smtp    Handles SMTP configuration and operations.
+	 */
     protected $smtp;
 
 	/**
