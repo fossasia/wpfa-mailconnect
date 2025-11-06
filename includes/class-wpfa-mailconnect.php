@@ -58,6 +58,15 @@ class Wpfa_Mailconnect {
 	protected $version;
 
 	/**
+	 * SMTP configuration manager instance.
+	 *
+	 * @since    1.0.0
+	 * @access   protected
+	 * @var      Wpfa_Mailconnect_SMTP    $smtp    Handles SMTP configuration and operations.
+	 */
+    protected $smtp;
+
+	/**
 	 * Define the core functionality of the plugin.
 	 *
 	 * Set the plugin name and the plugin version that can be used throughout the plugin.
@@ -122,6 +131,11 @@ class Wpfa_Mailconnect {
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-wpfa-mailconnect-public.php';
 
+		/**
+		 * The class responsible for SMTP settings and functionality
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-wpfa-mailconnect-smtp.php';
+
 		$this->loader = new Wpfa_Mailconnect_Loader();
 
 	}
@@ -156,6 +170,14 @@ class Wpfa_Mailconnect {
 
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
+
+		// instantiate smtp manager and register its hooks
+		$this->smtp = new Wpfa_Mailconnect_SMTP( $this->get_plugin_name(), $this->get_version() );
+
+		$this->loader->add_action( 'admin_menu', $this->smtp, 'register_admin_menu' );
+		$this->loader->add_action( 'admin_init', $this->smtp, 'settings_init' );
+		$this->loader->add_action( 'admin_post_smtp_send_test', $this->smtp, 'handle_test_email' );
+		$this->loader->add_action( 'phpmailer_init', $this->smtp, 'phpmailer_override' );
 
 	}
 

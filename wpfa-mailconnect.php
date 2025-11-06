@@ -14,7 +14,7 @@
  *
  * @wordpress-plugin
  * Plugin Name:       FOSSASIA Mail Connect
- * Plugin URI:        https://https://github.com/fossasia/wpfa-mail-connect
+ * Plugin URI:        https://github.com/fossasia/wpfa-mailconnect
  * Description:       A helper plugin to assist Wordpress to connect to your mail and send and receive emails.
  * Version:           1.0.0
  * Author:            FOSSASIA
