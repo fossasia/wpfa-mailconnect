@@ -243,6 +243,11 @@ class Wpfa_Mailconnect_SMTP {
             wp_die( 'Security check failed.' );
         }
 
+        if ( ! isset( $_POST['smtp_test_recipient'] ) ) {
+            add_settings_error( 'smtp_messages', 'email_missing', 'Error: Recipient email address is missing.', 'error' );
+            wp_safe_redirect( add_query_arg( 'settings-updated', 'false', wp_get_referer() ) );
+            exit;
+        }
         $recipient = sanitize_email( $_POST['smtp_test_recipient'] );
         if ( ! is_email( $recipient ) ) {
             add_settings_error( 'smtp_messages', 'email_invalid', 'Error: Please enter a valid recipient email address.', 'error' );
