@@ -231,7 +231,7 @@ class Wpfa_Mailconnect_SMTP {
                 $phpmailer->From = $from;
             } else {
                 // Optionally set a default or handle invalid email
-                $phpmailer->From = get_bloginfo( 'admin_email' );
+                $phpmailer->From = get_option( 'admin_email' );
                 // Optionally log the error or notify admin
                 error_log( 'WPFA MailConnect SMTP: Invalid "From" email address provided: ' . $from );
             }
