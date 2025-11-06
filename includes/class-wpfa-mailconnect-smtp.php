@@ -46,18 +46,31 @@ class Wpfa_Mailconnect_SMTP {
 
     /* --- Admin menu / settings registration --- */
 
-    public function register_admin_menu() {
-        add_options_page(
-            'SMTP Email Settings',
-            'SMTP Config',
-            'manage_options',
-            'smtp-config',
-            array( $this, 'render_settings_page' )
-        );
-    }
+	/**
+	 * Register the plugin options page under Settings.
+	 *
+	 * @return void
+	 */
+	public function register_admin_menu() {
+		add_options_page(
+			'SMTP Email Settings',
+			'SMTP Config',
+			'manage_options',
+			'smtp-config',
+			array( $this, 'render_settings_page' )
+		);
+	}
 
-    public function settings_init() {
-        register_setting( 'smtp_settings_group', 'smtp_options' );
+	/**
+	 * Initialize and register plugin settings, sections, and fields.
+	 *
+	 * Registers the settings group, adds the core SMTP credentials section
+	 * and the test email section, then registers each configured field.
+	 *
+	 * @return void
+	 */
+	public function settings_init() {
+		register_setting( 'smtp_settings_group', 'smtp_options' );
 
         add_settings_section(
             'smtp_main_section',
@@ -85,23 +98,46 @@ class Wpfa_Mailconnect_SMTP {
         );
     }
 
-    public function section_callback() {
-        echo '<p>Enter your SMTP credentials below. These settings will override the default WordPress email behavior.</p>';
-    }
+	/**
+	 * Callback for the main settings section description.
+	 *
+	 * Outputs a short description displayed above the SMTP credentials fields.
+	 *
+	 * @return void
+	 */
+	public function section_callback() {
+		echo '<p>Enter your SMTP credentials below. These settings will override the default WordPress email behavior.</p>';
+	}
 
-    public function test_section_callback() {
-        echo '<p>Verify your settings by sending a test email. Use the default email or enter a custom address.</p>';
-    }
+	/**
+	 * Callback for the test section description.
+	 *
+	 * Outputs a short description displayed above the test email form.
+	 *
+	 * @return void
+	 */
+	public function test_section_callback() {
+		echo '<p>Verify your settings by sending a test email. Use the default email or enter a custom address.</p>';
+	}
 
-    public function render_field( $args ) {
-        $options = get_option( 'smtp_options', array() );
-        $id = sanitize_key( $args['id'] );
-        if ( isset( $args['type'] ) && 'password' === $args['type'] ) {
-            // Always leave password blank by default for security
-            $value = isset( $options[ $id ] ) ? $options[ $id ] : '';
-        } else {
-            $value = isset( $options[ $id ] ) ? $options[ $id ] : $args['default'];
-        }
+	/**
+	 * Renders an individual settings field.
+	 *
+	 * Supports text, password, number and select field types. Retrieves the
+	 * current option value and outputs the corresponding input element.
+	 *
+	 * @param array $args Field definition and metadata (includes 'id', 'type', 'default', etc.).
+	 * @return void
+	 */
+	public function render_field( $args ) {
+		$options = get_option( 'smtp_options', array() );
+		$id = sanitize_key( $args['id'] );
+		if ( isset( $args['type'] ) && 'password' === $args['type'] ) {
+			// Always leave password blank by default for security
+			$value = isset( $options[ $id ] ) ? $options[ $id ] : '';
+		} else {
+			$value = isset( $options[ $id ] ) ? $options[ $id ] : $args['default'];
+		}
 
         if ( isset( $args['type'] ) && 'select' === $args['type'] ) {
             echo '<select id="' . esc_attr( $id ) . '" name="smtp_options[' . esc_attr( $id ) . ']">';
@@ -127,14 +163,21 @@ class Wpfa_Mailconnect_SMTP {
         );
     }
 
-    public function render_settings_page() {
-        if ( ! current_user_can( 'manage_options' ) ) {
-            return;
-        }
-        ?>
-        <div class="wrap">
-            <h1>SMTP Email Configuration</h1>
-            <?php settings_errors(); ?>
+	/**
+	 * Renders the plugin settings page.
+	 *
+	 * Checks user capabilities, outputs the settings form and the test email form.
+	 *
+	 * @return void
+	 */
+	public function render_settings_page() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		?>
+		<div class="wrap">
+			<h1>SMTP Email Configuration</h1>
+			<?php settings_errors(); ?>
 
             <form method="post" action="options.php">
                 <?php
@@ -144,7 +187,7 @@ class Wpfa_Mailconnect_SMTP {
                 ?>
             </form>
 
-            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #ccc;">
+			<hr style="margin: 20px 0; border: 0; border-top: 1px solid #ccc;">
 
             <h2>Test Email</h2>
             <?php $this->test_email_form(); ?>
