@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * SMTP configuration and management class.
+ *
+ * Handles SMTP settings registration, admin UI rendering,
+ * test email functionality, and PHPMailer configuration.
+ *
+ * @author Ubayed Bin Sufian
+ * @since 1.0.0
+ */
 class Wpfa_Mailconnect_SMTP {
 
     /**
