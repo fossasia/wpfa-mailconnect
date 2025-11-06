@@ -22,6 +22,12 @@ class Wpfa_Mailconnect_SMTP {
      */
     private $fields = array();
 
+    /**
+     * Initialize the SMTP configuration class.
+     *
+     * @param string $plugin_name The plugin identifier.
+     * @param string $version The plugin version.
+     */
     public function __construct( $plugin_name, $version ) {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
@@ -149,6 +155,14 @@ class Wpfa_Mailconnect_SMTP {
 
     /* --- Test email form & handler --- */
 
+    /**
+     * Outputs the HTML form for sending a test email using the configured SMTP settings.
+     *
+     * This form allows the user to specify a recipient email address and submit a test email.
+     * The default recipient is the SMTP user email or the WordPress admin email.
+     *
+     * @return void
+     */
     public function test_email_form() {
         $options = get_option( 'smtp_options', array() );
         $default_to = isset( $options['smtp_user'] ) ? $options['smtp_user'] : get_option( 'admin_email' );
@@ -170,6 +184,14 @@ class Wpfa_Mailconnect_SMTP {
         <?php
     }
 
+    /**
+     * Handles the test email form submission.
+     *
+     * Validates user permissions and nonce, sends a test email using the configured SMTP settings,
+     * adds a settings error message based on the result, and redirects back to the referring page.
+     *
+     * @return void
+     */
     public function handle_test_email() {
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( 'Unauthorized access. You do not have permission to perform this action.' );
@@ -210,6 +232,12 @@ class Wpfa_Mailconnect_SMTP {
 
     /* --- PHPMailer override --- */
 
+    /**
+     * Overrides PHPMailer settings with SMTP options from the plugin.
+     *
+     * @param PHPMailer $phpmailer The PHPMailer instance to configure.
+     * @return void
+     */
     public function phpmailer_override( $phpmailer ) {
         $options = get_option( 'smtp_options', array() );
 
