@@ -179,6 +179,10 @@ class Wpfa_Mailconnect {
 		$this->loader->add_action( 'admin_post_smtp_send_test', $this->smtp, 'handle_test_email' );
 		$this->loader->add_action( 'phpmailer_init', $this->smtp, 'phpmailer_override' );
 
+		// Add email logging hooks
+		$this->loader->add_filter( 'wp_mail', $this->smtp, 'log_email_on_send', 10, 1 );
+		$this->loader->add_action( 'wp_mail_failed', $this->smtp, 'log_email_failure', 10, 1 );
+
 	}
 
 	/**

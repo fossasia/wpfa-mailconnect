@@ -30,7 +30,10 @@ class Wpfa_Mailconnect_Activator {
 	 * @since    1.0.0
 	 */
 	public static function activate() {
-
+		// Create the email logs table
+		require_once plugin_dir_path( __FILE__ ) . 'class-wpfa-mailconnect-logger.php';
+		$logger = new Wpfa_Mailconnect_Logger();
+		$logger->create_table();
 	}
 
 }

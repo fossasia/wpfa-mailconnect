@@ -23,6 +23,16 @@ class Wpfa_Mailconnect_SMTP {
     private $fields = array();
 
     /**
+     * Logger instance
+     */
+    private $logger;    
+
+    /**
+     * Track logged emails to prevent duplicates
+     */
+    private static $logged_emails = array();
+
+    /**
      * Initialize the SMTP configuration class.
      *
      * @param string $plugin_name The plugin identifier.
@@ -42,6 +52,8 @@ class Wpfa_Mailconnect_SMTP {
             'smtp_secure' => array( 'label' => 'Encryption', 'default' => 'tls', 'type' => 'select', 'options' => array( 'tls' => 'TLS (Recommended)', 'ssl' => 'SSL', '' => 'None' ) ),
             'smtp_auth'   => array( 'label' => 'Authentication Required?', 'default' => '1', 'type' => 'select', 'options' => array( '1' => 'Yes', '0' => 'No' ) ),
         );
+
+        $this->logger = new Wpfa_Mailconnect_Logger();
     }
 
     /* --- Admin menu / settings registration --- */
@@ -259,7 +271,22 @@ class Wpfa_Mailconnect_SMTP {
         $body    = 'Congratulations! If you receive this email, your SMTP settings are configured correctly using the ' . get_bloginfo( 'name' ) . ' plugin.';
         $headers = array( 'Content-Type: text/html; charset=UTF-8' );
 
+        // Capture PHPMailer errors
+        $error_message = '';
+        add_action('wp_mail_failed', function($error) use (&$error_message) {
+            $error_message = $error->get_error_message();
+        });
+
         $success = wp_mail( $recipient, $subject, $body, $headers );
+        
+        // Log the test email attempt
+        $this->logger->log_email(
+            $recipient, 
+            $subject, 
+            $body, 
+            $success ? 'success' : 'failed',
+            $error_message
+        );
 
         if ( $success ) {
             add_settings_error( 'smtp_messages', 'email_success', 'Success! Test email sent to ' . esc_html( $recipient ) . '.', 'updated' );
@@ -322,5 +349,79 @@ class Wpfa_Mailconnect_SMTP {
             }
             $phpmailer->FromName   = $name;
         }
+
+        // Disable debug output
+        $phpmailer->SMTPDebug = 0;
+    }
+
+    /**
+     * Log email using wp_mail filter
+     * This hook fires before wp_mail sends, allowing us to capture data without blocking
+     */
+    public function log_email_on_send($args) {
+        // Extract email data from args
+        $to = isset($args['to']) ? $args['to'] : '';
+        $subject = isset($args['subject']) ? $args['subject'] : 'No Subject';
+        $message = isset($args['message']) ? $args['message'] : '';
+        
+        // Handle 'to' field - can be string or array
+        $to_string = '';
+        if (is_array($to)) {
+            $to_string = implode(', ', $to);
+        } else {
+            $to_string = $to;
+        }
+        
+        // Create unique hash to prevent duplicate logging
+        $hash = md5($to_string . $subject . microtime(true));
+        
+        // Only log if we haven't logged this exact email recently
+        if (!isset(self::$logged_emails[$hash])) {
+            self::$logged_emails[$hash] = true;
+            
+            // Log with 'pending' status - we'll update if it fails
+            $this->logger->log_email(
+                $to_string,
+                $subject,
+                $message,
+                'success',
+                ''
+            );
+            
+            // Clean up old hashes
+            if (count(self::$logged_emails) > 20) {
+                self::$logged_emails = array_slice(self::$logged_emails, -10, 10, true);
+            }
+        }
+        
+        // MUST return the args unchanged for wp_mail to work
+        return $args;
+    }
+
+    /**
+     * Log failed emails
+     */
+    public function log_email_failure($wp_error) {
+        $error_data = $wp_error->get_error_data();
+        
+        $to = 'Unknown';
+        $subject = 'Unknown';
+        $message = '';
+        
+        if (is_array($error_data)) {
+            if (isset($error_data['to'])) {
+                $to = is_array($error_data['to']) ? implode(', ', $error_data['to']) : $error_data['to'];
+            }
+            $subject = isset($error_data['subject']) ? $error_data['subject'] : 'Unknown';
+            $message = isset($error_data['message']) ? $error_data['message'] : '';
+        }
+        
+        $this->logger->log_email(
+            $to,
+            $subject,
+            $message,
+            'failed',
+            $wp_error->get_error_message()
+        );
     }
 }

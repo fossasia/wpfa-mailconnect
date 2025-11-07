@@ -65,6 +65,11 @@ register_deactivation_hook( __FILE__, 'deactivate_wpfa_mailconnect' );
 require plugin_dir_path( __FILE__ ) . 'includes/class-wpfa-mailconnect.php';
 
 /**
+ * Require the logger class
+ */
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-wpfa-mailconnect-logger.php';
+
+/**
  * Begins execution of the plugin.
  *
  * Since everything within the plugin is registered via hooks,
