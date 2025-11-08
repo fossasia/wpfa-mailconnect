@@ -124,7 +124,7 @@ class Wpfa_Mailconnect_Admin {
         
         // Pagination settings
         $per_page = 20;
-        $current_page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
+        $current_page = isset($_GET['paged']) ? max(1, absint($_GET['paged'])) : 1;
         $offset = ($current_page - 1) * $per_page;
         
         // Get paginated logs and total count
