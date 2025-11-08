@@ -136,7 +136,7 @@ class Wpfa_Mailconnect_Admin {
         <div class="wrap">
             <h1>Email Logs</h1>
             
-            <?php if (isset($_GET['cleared']) && $_GET['cleared'] == '1'): ?>
+            <?php if (isset($_GET['cleared']) && sanitize_text_field($_GET['cleared']) === '1'): ?>
                 <div class="notice notice-success">
                     <p><?php _e('Logs cleared successfully!'); ?></p>
                 </div>
