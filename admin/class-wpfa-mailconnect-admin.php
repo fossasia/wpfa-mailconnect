@@ -177,14 +177,14 @@ class Wpfa_Mailconnect_Admin {
                 // Add pagination
                 echo '<div class="tablenav bottom">';
                 echo '<div class="tablenav-pages">';
-                echo paginate_links(array(
+                echo wp_kses_post(paginate_links(array(
                     'base' => add_query_arg('paged', '%#%'),
                     'format' => '',
                     'prev_text' => __('&laquo;'),
                     'next_text' => __('&raquo;'),
                     'total' => $total_pages,
                     'current' => $current_page
-                ));
+                )));
                 echo '</div>';
                 echo '</div>';
                 ?>
