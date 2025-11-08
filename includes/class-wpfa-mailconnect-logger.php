@@ -24,7 +24,7 @@ class Wpfa_Mailconnect_Logger {
         $charset_collate = $wpdb->get_charset_collate();
 
         $sql = "CREATE TABLE IF NOT EXISTS {$this->table_name} (
-            id bigint(20) NOT NULL AUTO_INCREMENT,
+            id bigint NOT NULL AUTO_INCREMENT,
             to_email varchar(100) NOT NULL,
             subject varchar(255) NOT NULL, 
             message text NOT NULL,
