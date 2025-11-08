@@ -41,12 +41,32 @@ class Wpfa_Mailconnect_Logger {
     public function log_email($to, $subject, $message, $status, $error = '') {
         global $wpdb;
         
+        // Allow safe HTML in the message using wp_kses
+        $allowed_html = array(
+            'a' => array(
+                'href' => array(),
+                'title' => array(),
+                'target' => array(),
+                'rel' => array(),
+            ),
+            'br' => array(),
+            'em' => array(),
+            'strong' => array(),
+            'p' => array(),
+            'ul' => array(),
+            'ol' => array(),
+            'li' => array(),
+            'span' => array(
+                'style' => array(),
+            ),
+        );
+
         return $wpdb->insert(
             $this->table_name,
             array(
                 'to_email' => $to,
                 'subject' => $subject,
-                'message' => wp_strip_all_tags($message),
+                'message' => wp_kses($message, $allowed_html),
                 'status' => $status,
                 'error_message' => $error
             ),
