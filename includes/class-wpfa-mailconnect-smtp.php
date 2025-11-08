@@ -271,14 +271,31 @@ class Wpfa_Mailconnect_SMTP {
         $body    = 'Congratulations! If you receive this email, your SMTP settings are configured correctly using the ' . get_bloginfo( 'name' ) . ' plugin.';
         $headers = array( 'Content-Type: text/html; charset=UTF-8' );
 
-        // Capture PHPMailer errors
+        // Capture PHPMailer errors by registering a temporary handler.
         $error_message = '';
-        add_action('wp_mail_failed', function($error) use (&$error_message) {
+        
+        // Store the closure in a variable so we can remove it later.
+        $error_capture_handler = function($error) use (&$error_message) {
             $error_message = $error->get_error_message();
-        });
+        };
+
+        // Add the temporary action hook
+        add_action('wp_mail_failed', $error_capture_handler);
 
         $success = wp_mail( $recipient, $subject, $body, $headers );
         
+        // Crucial: Remove the action hook immediately after wp_mail() is done
+        // to prevent duplicate hooks from accumulating on subsequent submissions.
+        remove_action('wp_mail_failed', $error_capture_handler);
+        
+        // If wp_mail failed and the handler didn't capture the error, check PHPMailer directly.
+        if ( ! $success && empty( $error_message ) ) {
+            global $phpmailer;
+            if ( ! empty( $phpmailer->ErrorInfo ) ) {
+                $error_message = $phpmailer->ErrorInfo;
+            }
+        }
+
         // Log the test email attempt
         $this->logger->log_email(
             $recipient, 
@@ -291,14 +308,13 @@ class Wpfa_Mailconnect_SMTP {
         if ( $success ) {
             add_settings_error( 'smtp_messages', 'email_success', 'Success! Test email sent to ' . esc_html( $recipient ) . '.', 'updated' );
         } else {
-            global $phpmailer;
-            $error_message = 'Failed to send test email. ';
-            if ( ! empty( $phpmailer->ErrorInfo ) ) {
-                $error_message .= 'PHPMailer Error: ' . esc_html( $phpmailer->ErrorInfo );
+            $display_error = 'Failed to send test email. ';
+            if ( ! empty( $error_message ) ) {
+                $display_error .= 'Error: ' . esc_html( $error_message );
             } else {
-                $error_message .= 'Check your credentials, host, and port settings.';
+                $display_error .= 'Check your credentials, host, and port settings.';
             }
-            add_settings_error( 'smtp_messages', 'email_fail', esc_html( $error_message ), 'error' );
+            add_settings_error( 'smtp_messages', 'email_fail', $display_error, 'error' );
         }
 
         wp_safe_redirect( add_query_arg( 'settings-updated', $success ? 'true' : 'false', wp_get_referer() ) );
