@@ -23,17 +23,18 @@
 class Wpfa_Mailconnect_Activator {
 
 	/**
-	 * Short Description. (use period)
+	 * Creates the email logs table upon plugin activation.
 	 *
-	 * Long Description.
+	 * Requires the logger class and calls its static table creation method.
 	 *
 	 * @since    1.0.0
 	 */
 	public static function activate() {
 		// Create the email logs table
 		require_once plugin_dir_path( __FILE__ ) . 'class-wpfa-mailconnect-logger.php';
-		$logger = new Wpfa_Mailconnect_Logger();
-		$logger->create_table();
+		
+		// Call the static method to create the table
+		Wpfa_Mailconnect_Logger::create_log_table();
 	}
 
 }
