@@ -404,8 +404,8 @@ class Wpfa_Mailconnect_SMTP {
             $to_string = $to;
         }
         
-        // Create unique hash to prevent duplicate logging
-        $hash = md5( $to_string . $subject . microtime( true ) );
+        // Create hash to prevent duplicate logging (based on recipient and subject)
+        $hash = md5( $to_string . $subject );
         
         // Only log if we haven't logged this exact email recently
         if ( ! isset( self::$logged_emails[$hash] ) ) {
