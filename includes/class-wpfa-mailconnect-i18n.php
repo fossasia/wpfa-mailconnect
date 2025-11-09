@@ -25,8 +25,6 @@
  * @author     FOSSASIA <info@fossasia.org>
  */
 class Wpfa_Mailconnect_i18n {
-
-
 	/**
 	 * Load the plugin text domain for translation.
 	 *
@@ -41,7 +39,5 @@ class Wpfa_Mailconnect_i18n {
 		);
 
 	}
-
-
-
+	
 }

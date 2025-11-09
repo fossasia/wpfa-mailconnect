@@ -104,10 +104,14 @@ class Wpfa_Mailconnect_Admin {
 	}
 
     public function add_logs_page() {
+        // Menu Label and Page Title
+        $page_title = esc_html__('Email Logs', 'wpfa-mailconnect');
+        $menu_title = esc_html__('Email Logs', 'wpfa-mailconnect');
+
         add_submenu_page(
             'options-general.php',
-            'Email Logs',
-            'Email Logs',
+            $page_title,
+            $menu_title,
             'manage_options',
             'wpfa-mail-logs',
             array($this, 'render_logs_page')
@@ -117,7 +121,8 @@ class Wpfa_Mailconnect_Admin {
     public function render_logs_page() {
 		// Checks that the current user has permission (manage_options = administrator)
         if (!current_user_can('manage_options')) {
-            wp_die(__('You do not have sufficient permissions to access this page.'));
+            // Permission denied message
+            wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'wpfa-mailconnect'));
         }
 
         $logger = new Wpfa_Mailconnect_Logger();
@@ -132,32 +137,42 @@ class Wpfa_Mailconnect_Admin {
         $total_logs = $logger->get_total_logs();
         $total_pages = ceil($total_logs / $per_page);
 
+        // --- Start HTML Output ---
         ?>
         <div class="wrap">
-            <h1>Email Logs</h1>
+            <h1><?php esc_html_e('Email Logs', 'wpfa-mailconnect'); ?></h1>
             
             <?php if (isset($_GET['cleared']) && sanitize_text_field($_GET['cleared']) === '1'): ?>
                 <div class="notice notice-success">
-                    <p><?php _e('Logs cleared successfully!'); ?></p>
+                    <p><?php esc_html_e('Logs cleared successfully!', 'wpfa-mailconnect'); ?></p>
                 </div>
             <?php endif; ?>
             
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin: 1em 0;">
                 <input type="hidden" name="action" value="clear_email_logs">
                 <?php wp_nonce_field('clear_email_logs_nonce', 'clear_logs_nonce'); ?>
-                <?php submit_button('Clear All Logs', 'delete', 'submit', false, 
-                    array('onclick' => 'return confirm("Are you sure you want to clear all email logs?")')); ?>
+                <?php 
+                    // Button Text
+                    submit_button(
+                        esc_html__('Clear All Logs', 'wpfa-mailconnect'), 
+                        'delete', 
+                        'submit', 
+                        false, 
+                        // Confirmation String
+                        array('onclick' => 'return confirm("'. esc_js(__('Are you sure you want to clear all email logs?', 'wpfa-mailconnect')) .'")')
+                    ); 
+                ?>
             </form>
 
             <?php if (!empty($logs)): ?>
                 <table class="wp-list-table widefat fixed striped">
                     <thead>
                         <tr>
-                            <th>Date</th>
-                            <th>To</th>
-                            <th>Subject</th>
-                            <th>Status</th>
-                            <th>Error</th>
+                            <th><?php esc_html_e('Date', 'wpfa-mailconnect'); ?></th>
+                            <th><?php esc_html_e('To', 'wpfa-mailconnect'); ?></th>
+                            <th><?php esc_html_e('Subject', 'wpfa-mailconnect'); ?></th>
+                            <th><?php esc_html_e('Status', 'wpfa-mailconnect'); ?></th>
+                            <th><?php esc_html_e('Error', 'wpfa-mailconnect'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -180,8 +195,9 @@ class Wpfa_Mailconnect_Admin {
                 echo wp_kses_post(paginate_links(array(
                     'base' => add_query_arg('paged', '%#%'),
                     'format' => '',
-                    'prev_text' => __('&laquo;'),
-                    'next_text' => __('&raquo;'),
+                    // Pagination Arrows
+                    'prev_text' => __('&laquo;', 'wpfa-mailconnect'),
+                    'next_text' => __('&raquo;', 'wpfa-mailconnect'),
                     'total' => $total_pages,
                     'current' => $current_page
                 )));
@@ -189,7 +205,7 @@ class Wpfa_Mailconnect_Admin {
                 echo '</div>';
                 ?>
             <?php else: ?>
-                <p><?php _e('No email logs found.'); ?></p>
+                <p><?php esc_html_e('No email logs found.', 'wpfa-mailconnect'); ?></p>
             <?php endif; ?>
         </div>
         <?php	
@@ -198,11 +214,13 @@ class Wpfa_Mailconnect_Admin {
     public function handle_clear_logs() {
 		// Ensures only admins can clear logs
         if (!current_user_can('manage_options')) {
-            wp_die('Unauthorized access');
+            // Unauthorized access message
+            wp_die(esc_html__('Unauthorized access', 'wpfa-mailconnect'));
         }
 
         if (!isset($_POST['clear_logs_nonce']) || !wp_verify_nonce($_POST['clear_logs_nonce'], 'clear_email_logs_nonce')) {
-            wp_die('Invalid nonce');
+            // Invalid nonce message
+            wp_die(esc_html__('Invalid nonce', 'wpfa-mailconnect'));
         }
 
         $logger = new Wpfa_Mailconnect_Logger();

@@ -65,8 +65,8 @@ class Wpfa_Mailconnect_SMTP {
 	 */
 	public function register_admin_menu() {
 		add_options_page(
-			'SMTP Email Settings',
-			'SMTP Config',
+			__( 'SMTP Email Settings', 'wpfa-mailconnect' ),
+			__( 'SMTP Config', 'wpfa-mailconnect' ),
 			'manage_options',
 			'smtp-config',
 			array( $this, 'render_settings_page' )
@@ -84,12 +84,12 @@ class Wpfa_Mailconnect_SMTP {
 	public function settings_init() {
 		register_setting( 'smtp_settings_group', 'smtp_options' );
 
-        add_settings_section(
-            'smtp_main_section',
-            'Core SMTP Credentials',
-            array( $this, 'section_callback' ),
-            'smtp-config'
-        );
+		add_settings_section(
+			'smtp_main_section',
+			__( 'Core SMTP Credentials', 'wpfa-mailconnect' ),
+			array( $this, 'section_callback' ),
+			'smtp-config'
+		);
 
         foreach ( $this->fields as $id => $args ) {
             add_settings_field(
@@ -102,13 +102,13 @@ class Wpfa_Mailconnect_SMTP {
             );
         }
 
-        add_settings_section(
-            'smtp_test_section',
-            'Send a Test Email',
-            array( $this, 'test_section_callback' ),
-            'smtp-config'
-        );
-    }
+		add_settings_section(
+			'smtp_test_section',
+			__( 'Send a Test Email', 'wpfa-mailconnect' ),
+			array( $this, 'test_section_callback' ),
+			'smtp-config'
+		);
+	}
 
 	/**
 	 * Callback for the main settings section description.
@@ -118,7 +118,7 @@ class Wpfa_Mailconnect_SMTP {
 	 * @return void
 	 */
 	public function section_callback() {
-		echo '<p>Enter your SMTP credentials below. These settings will override the default WordPress email behavior.</p>';
+		echo '<p>' . esc_html__( 'Enter your SMTP credentials below. These settings will override the default WordPress email behavior.', 'wpfa-mailconnect' ) . '</p>';
 	}
 
 	/**
@@ -129,7 +129,7 @@ class Wpfa_Mailconnect_SMTP {
 	 * @return void
 	 */
 	public function test_section_callback() {
-		echo '<p>Verify your settings by sending a test email. Use the default email or enter a custom address.</p>';
+		echo '<p>' . esc_html__( 'Verify your settings by sending a test email. Use the default email or enter a custom address.', 'wpfa-mailconnect' ) . '</p>';
 	}
 
 	/**
@@ -143,7 +143,7 @@ class Wpfa_Mailconnect_SMTP {
 	 */
 	public function render_field( $args ) {
 		$options = get_option( 'smtp_options', array() );
-		$id = sanitize_key( $args['id'] );
+		$id      = sanitize_key( $args['id'] );
 		if ( isset( $args['type'] ) && 'password' === $args['type'] ) {
 			// Always leave password blank by default for security
 			$value = isset( $options[ $id ] ) ? $options[ $id ] : '';
@@ -188,20 +188,20 @@ class Wpfa_Mailconnect_SMTP {
 		}
 		?>
 		<div class="wrap">
-			<h1>SMTP Email Configuration</h1>
+			<h1><?php esc_html_e( 'SMTP Email Configuration', 'wpfa-mailconnect' ); ?></h1>
 			<?php settings_errors(); ?>
 
             <form method="post" action="options.php">
                 <?php
                 settings_fields( 'smtp_settings_group' );
                 do_settings_sections( 'smtp-config' );
-                submit_button( 'Save SMTP Settings' );
+                submit_button( __( 'Save SMTP Settings', 'wpfa-mailconnect' ) );
                 ?>
             </form>
 
 			<hr style="margin: 20px 0; border: 0; border-top: 1px solid #ccc;">
 
-            <h2>Test Email</h2>
+            <h2><?php esc_html_e( 'Test Email', 'wpfa-mailconnect' ); ?></h2>
             <?php $this->test_email_form(); ?>
 
         </div>
@@ -219,7 +219,7 @@ class Wpfa_Mailconnect_SMTP {
      * @return void
      */
     public function test_email_form() {
-        $options = get_option( 'smtp_options', array() );
+        $options    = get_option( 'smtp_options', array() );
         $default_to = isset( $options['smtp_user'] ) ? $options['smtp_user'] : get_option( 'admin_email' );
         ?>
         <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -227,14 +227,14 @@ class Wpfa_Mailconnect_SMTP {
             <?php wp_nonce_field( 'smtp_test_email_nonce', 'smtp_nonce_field' ); ?>
             <table class="form-table">
                 <tr>
-                    <th scope="row"><label for="smtp_test_recipient">Recipient Email</label></th>
+                    <th scope="row"><label for="smtp_test_recipient"><?php esc_html_e( 'Recipient Email', 'wpfa-mailconnect' ); ?></label></th>
                     <td>
                         <input type="email" id="smtp_test_recipient" name="smtp_test_recipient" value="<?php echo esc_attr( $default_to ); ?>" class="regular-text" required />
-                        <p class="description">The email address the test email will be sent to.</p>
+                        <p class="description"><?php esc_html_e( 'The email address the test email will be sent to.', 'wpfa-mailconnect' ); ?></p>
                     </td>
                 </tr>
             </table>
-            <?php submit_button( 'Send Test Email', 'secondary', 'smtp_send_test_button' ); ?>
+            <?php submit_button( __( 'Send Test Email', 'wpfa-mailconnect' ), 'secondary', 'smtp_send_test_button' ); ?>
         </form>
         <?php
     }
@@ -249,44 +249,52 @@ class Wpfa_Mailconnect_SMTP {
      */
     public function handle_test_email() {
         if ( ! current_user_can( 'manage_options' ) ) {
-            wp_die( 'Unauthorized access. You do not have permission to perform this action.' );
+            wp_die( esc_html__( 'Unauthorized access. You do not have permission to perform this action.', 'wpfa-mailconnect' ) );
         }
         if ( ! isset( $_POST['smtp_nonce_field'] ) || ! wp_verify_nonce( $_POST['smtp_nonce_field'], 'smtp_test_email_nonce' ) ) {
-            wp_die( 'Security check failed.' );
+            wp_die( esc_html__( 'Security check failed.', 'wpfa-mailconnect' ) );
         }
 
         if ( ! isset( $_POST['smtp_test_recipient'] ) ) {
-            add_settings_error( 'smtp_messages', 'email_missing', 'Error: Recipient email address is missing.', 'error' );
+            add_settings_error( 'smtp_messages', 'email_missing', esc_html__( 'Error: Recipient email address is missing.', 'wpfa-mailconnect' ), 'error' );
             wp_safe_redirect( add_query_arg( 'settings-updated', 'false', wp_get_referer() ) );
             exit;
         }
         $recipient = sanitize_email( $_POST['smtp_test_recipient'] );
         if ( ! is_email( $recipient ) ) {
-            add_settings_error( 'smtp_messages', 'email_invalid', 'Error: Please enter a valid recipient email address.', 'error' );
+            add_settings_error( 'smtp_messages', 'email_invalid', esc_html__( 'Error: Please enter a valid recipient email address.', 'wpfa-mailconnect' ), 'error' );
             wp_safe_redirect( add_query_arg( 'settings-updated', 'false', wp_get_referer() ) );
             exit;
         }
 
-        $subject = 'SMTP Test Email from ' . get_bloginfo( 'name' );
-        $body    = 'Congratulations! If you receive this email, your SMTP settings are configured correctly using the ' . get_bloginfo( 'name' ) . ' plugin.';
+		$subject = sprintf(
+			/* translators: %s: Blog name */
+			__( 'SMTP Test Email from %s', 'wpfa-mailconnect' ),
+			get_bloginfo( 'name' )
+		);
+		$body    = sprintf(
+			/* translators: %s: Blog name */
+			__( 'Congratulations! If you receive this email, your SMTP settings are configured correctly using the %s plugin.', 'wpfa-mailconnect' ),
+			get_bloginfo( 'name' )
+		);
         $headers = array( 'Content-Type: text/html; charset=UTF-8' );
 
         // Capture PHPMailer errors by registering a temporary handler.
         $error_message = '';
         
         // Store the closure in a variable so we can remove it later.
-        $error_capture_handler = function($error) use (&$error_message) {
+        $error_capture_handler = function( $error ) use ( &$error_message ) {
             $error_message = $error->get_error_message();
         };
 
         // Add the temporary action hook
-        add_action('wp_mail_failed', $error_capture_handler);
+        add_action( 'wp_mail_failed', $error_capture_handler );
 
         $success = wp_mail( $recipient, $subject, $body, $headers );
         
         // Crucial: Remove the action hook immediately after wp_mail() is done
         // to prevent duplicate hooks from accumulating on subsequent submissions.
-        remove_action('wp_mail_failed', $error_capture_handler);
+        remove_action( 'wp_mail_failed', $error_capture_handler );
         
         // If wp_mail failed and the handler didn't capture the error, check PHPMailer directly.
         if ( ! $success && empty( $error_message ) ) {
@@ -298,24 +306,32 @@ class Wpfa_Mailconnect_SMTP {
 
         // Log the test email attempt
         $this->logger->log_email(
-            $recipient, 
-            $subject, 
-            $body, 
+            $recipient,
+            $subject,
+            $body,
             $success ? 'success' : 'failed',
             $error_message
         );
 
-        if ( $success ) {
-            add_settings_error( 'smtp_messages', 'email_success', 'Success! Test email sent to ' . esc_html( $recipient ) . '.', 'updated' );
-        } else {
-            $display_error = 'Failed to send test email. ';
-            if ( ! empty( $error_message ) ) {
-                $display_error .= 'Error: ' . esc_html( $error_message );
-            } else {
-                $display_error .= 'Check your credentials, host, and port settings.';
-            }
-            add_settings_error( 'smtp_messages', 'email_fail', $display_error, 'error' );
-        }
+		if ( $success ) {
+			$message = sprintf(
+				/* translators: %s: Recipient email address */
+				__( 'Success! Test email sent to %s.', 'wpfa-mailconnect' ),
+				esc_html( $recipient )
+			);
+			add_settings_error( 'smtp_messages', 'email_success', $message, 'updated' );
+		} else {
+			if ( ! empty( $error_message ) ) {
+				$display_error = sprintf(
+					/* translators: %s: The detailed error message from PHPMailer */
+					__( 'Failed to send test email. Error: %s', 'wpfa-mailconnect' ),
+					esc_html( $error_message )
+				);
+			} else {
+				$display_error = esc_html__( 'Failed to send test email. Check your credentials, host, and port settings.', 'wpfa-mailconnect' );
+			}
+			add_settings_error( 'smtp_messages', 'email_fail', $display_error, 'error' );
+		}
 
         wp_safe_redirect( add_query_arg( 'settings-updated', $success ? 'true' : 'false', wp_get_referer() ) );
         exit;
@@ -374,28 +390,28 @@ class Wpfa_Mailconnect_SMTP {
      * Log email using wp_mail filter
      * This hook fires before wp_mail sends, allowing us to capture data without blocking
      */
-    public function log_email_on_send($args) {
+    public function log_email_on_send( $args ) {
         // Extract email data from args
-        $to = isset($args['to']) ? $args['to'] : '';
-        $subject = isset($args['subject']) ? $args['subject'] : 'No Subject';
-        $message = isset($args['message']) ? $args['message'] : '';
+        $to      = isset( $args['to'] ) ? $args['to'] : '';
+        $subject = isset( $args['subject'] ) ? $args['subject'] : 'No Subject';
+        $message = isset( $args['message'] ) ? $args['message'] : '';
         
         // Handle 'to' field - can be string or array
         $to_string = '';
-        if (is_array($to)) {
-            $to_string = implode(', ', $to);
+        if ( is_array( $to ) ) {
+            $to_string = implode( ', ', $to );
         } else {
             $to_string = $to;
         }
         
         // Create unique hash to prevent duplicate logging
-        $hash = md5($to_string . $subject . microtime(true));
+        $hash = md5( $to_string . $subject . microtime( true ) );
         
         // Only log if we haven't logged this exact email recently
-        if (!isset(self::$logged_emails[$hash])) {
-            self::$logged_emails[$hash] = true;
+        if ( ! isset( self::$logged_emails[$hash] ) ) {
+            self::$logged_emails[ $hash ] = true;
             
-            // Log with 'pending' status - we'll update if it fails
+            // Log with 'success' status
             $this->logger->log_email(
                 $to_string,
                 $subject,
@@ -405,8 +421,8 @@ class Wpfa_Mailconnect_SMTP {
             );
             
             // Clean up old hashes
-            if (count(self::$logged_emails) > 20) {
-                self::$logged_emails = array_slice(self::$logged_emails, -10, 10, true);
+            if ( count( self::$logged_emails ) > 20 ) {
+                self::$logged_emails = array_slice( self::$logged_emails, -10, 10, true );
             }
         }
         
@@ -417,19 +433,19 @@ class Wpfa_Mailconnect_SMTP {
     /**
      * Log failed emails
      */
-    public function log_email_failure($wp_error) {
+    public function log_email_failure( $wp_error ) {
         $error_data = $wp_error->get_error_data();
-        
-        $to = 'Unknown';
+
+        $to      = 'Unknown';
         $subject = 'Unknown';
         $message = '';
         
-        if (is_array($error_data)) {
-            if (isset($error_data['to'])) {
-                $to = is_array($error_data['to']) ? implode(', ', $error_data['to']) : $error_data['to'];
+        if ( is_array( $error_data ) ) {
+            if ( isset( $error_data['to'] ) ) {
+                $to = is_array( $error_data['to'] ) ? implode( ', ', $error_data['to'] ) : $error_data['to'];
             }
-            $subject = isset($error_data['subject']) ? $error_data['subject'] : 'Unknown';
-            $message = isset($error_data['message']) ? $error_data['message'] : '';
+            $subject = isset( $error_data['subject'] ) ? $error_data['subject'] : 'Unknown';
+            $message = isset( $error_data['message'] ) ? $error_data['message'] : '';
         }
         
         $this->logger->log_email(
