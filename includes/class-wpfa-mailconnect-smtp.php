@@ -383,7 +383,7 @@ class Wpfa_Mailconnect_SMTP {
         }
 
         // Disable debug output
-        $phpmailer->SMTPDebug = SMTP::DEBUG_OFF;
+        $phpmailer->SMTPDebug = 0;
     }
 
     /**
