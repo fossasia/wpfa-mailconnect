@@ -99,6 +99,7 @@ class Wpfa_Mailconnect {
 	 * - Wpfa_Mailconnect_i18n. Defines internationalization functionality.
 	 * - Wpfa_Mailconnect_Admin. Defines all hooks for the admin area.
 	 * - Wpfa_Mailconnect_Public. Defines all hooks for the public side of the site.
+     * - Wpfa_Mailconnect_Updater. Handles database migrations.
 	 *
 	 * Create an instance of the loader which will be used to register the hooks
 	 * with WordPress.
@@ -183,6 +184,9 @@ class Wpfa_Mailconnect {
 		$this->loader->add_filter( 'wp_mail', $this->smtp, 'log_email_on_send', 10, 1 );
 		$this->loader->add_action( 'wp_mail_failed', $this->smtp, 'log_email_failure', 10, 1 );
 
+        // Instantiate the Updater and register its migration check hook.
+        $updater = new Wpfa_Mailconnect_Updater();
+        $this->loader->add_action( 'admin_init', $updater, 'check_for_updates' ); 
 	}
 
 	/**
@@ -240,5 +244,4 @@ class Wpfa_Mailconnect {
 	public function get_version() {
 		return $this->version;
 	}
-
 }

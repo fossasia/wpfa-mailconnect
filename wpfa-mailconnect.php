@@ -109,10 +109,5 @@ function run_wpfa_mailconnect() {
 
 	$plugin = new Wpfa_Mailconnect();
 	$plugin->run();
-    
-	// Hook into admin_init to check for and run database migrations
-	$updater = new Wpfa_Mailconnect_Updater();
-    add_action( 'admin_init', array( $updater, 'check_for_updates' ) );
-
 }
 run_wpfa_mailconnect();
