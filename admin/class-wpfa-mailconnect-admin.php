@@ -79,6 +79,17 @@ class Wpfa_Mailconnect_Admin {
 
 		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/wpfa-mailconnect-admin.css', array(), $this->version, 'all' );
 
+        // Enqueue logs page styles only on the logs page
+        $screen = get_current_screen();
+        if ( $screen && 'settings_page_wpfa-mail-logs' === $screen->id ) {
+            wp_enqueue_style(
+                $this->plugin_name . '-logs',
+                plugin_dir_url( __FILE__ ) . 'css/wpfa-mailconnect-logs.css',
+                array(),
+                $this->version,
+                'all'
+            );
+        }
 	}
 
 	/**
@@ -252,40 +263,6 @@ class Wpfa_Mailconnect_Admin {
             <?php endif; ?>
         </div>
 		<?php
-        // A minimal style addition for log status visibility and table filters
-        echo '<style>
-            .log-status {
-                font-weight: bold;
-                padding: 2px 8px;
-                border-radius: 4px;
-                display: inline-block;
-            }
-            .log-status-success {
-                background-color: #d1e7dd;
-                color: #0f5132;
-            }
-            .log-status-failed {
-                background-color: #f8d7da;
-                color: #842029;
-            }
-            .search-form {
-                display: flex;
-                gap: 10px;
-                align-items: center;
-                margin: 15px 0;
-            }
-            .search-form .submit {
-                margin: 0;
-            }
-            .button-delete {
-                color: #a00;
-                border-color: #a00;
-            }
-            .button-delete:hover {
-                color: #fff;
-                background-color: #a00;
-            }
-        </style>';
 	}
 
     /**

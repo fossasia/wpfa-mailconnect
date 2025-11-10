@@ -1,0 +1,44 @@
+/**
+ * Email Logs Page Styles
+ * 
+ * @package    Wpfa_Mailconnect
+ * @subpackage Wpfa_Mailconnect/admin/css
+ */
+
+.log-status {
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.log-status-success {
+    background-color: #d1e7dd;
+    color: #10291d;
+}
+
+.log-status-failed {
+    background-color: #f8d7da;
+    color: #842029;
+}
+
+.search-form {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin: 15px 0;
+}
+
+.search-form .submit {
+    margin: 0;
+}
+
+.button-delete {
+    color: #a00;
+    border-color: #a00;
+}
+
+.button-delete:hover {
+    color: #fff;
+    background-color: #a00;
+}
