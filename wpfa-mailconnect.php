@@ -38,6 +38,13 @@ if ( ! defined( 'WPINC' ) ) {
 define( 'WPFA_MAILCONNECT_VERSION', '1.0.0' );
 
 /**
+ * Defines the required database schema version.
+ * This should only be updated when the database schema changes.
+ * The migration logic uses this constant to determine if updates are needed.
+ */
+define( 'WPFA_MAILCONNECT_DB_VERSION', '1.0.0' );
+
+/**
  * The code that runs during plugin activation.
  * This action is documented in includes/class-wpfa-mailconnect-activator.php
  */
@@ -85,6 +92,11 @@ require plugin_dir_path( __FILE__ ) . 'includes/class-wpfa-mailconnect.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-wpfa-mailconnect-logger.php';
 
 /**
+ * Require the updater class for database migrations.
+ */
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-wpfa-mailconnect-updater.php';
+
+/**
  * Begins execution of the plugin.
  *
  * Since everything within the plugin is registered via hooks,
@@ -97,6 +109,10 @@ function run_wpfa_mailconnect() {
 
 	$plugin = new Wpfa_Mailconnect();
 	$plugin->run();
+    
+	// Hook into admin_init to check for and run database migrations
+	$updater = new Wpfa_Mailconnect_Updater();
+    add_action( 'admin_init', array( $updater, 'check_for_updates' ) );
 
 }
 run_wpfa_mailconnect();

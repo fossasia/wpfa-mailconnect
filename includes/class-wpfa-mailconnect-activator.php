@@ -23,7 +23,7 @@
 class Wpfa_Mailconnect_Activator {
 
 	/**
-	 * Creates the email logs table upon plugin activation.
+	 * Creates the email logs table upon plugin activation and sets the initial DB version.
 	 *
 	 * Requires the logger class and calls its static table creation method.
 	 *
@@ -35,6 +35,10 @@ class Wpfa_Mailconnect_Activator {
 		
 		// Call the static method to create the table
 		Wpfa_Mailconnect_Logger::create_log_table();
+
+		// Set the initial DB version for the migration system.
+		// add_option only succeeds if the option does not already exist, which is perfect for activation.
+		add_option( 'wpfa_mailconnect_db_version', WPFA_MAILCONNECT_DB_VERSION );
 	}
 
 }

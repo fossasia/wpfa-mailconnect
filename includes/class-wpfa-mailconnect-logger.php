@@ -43,9 +43,10 @@ class Wpfa_Mailconnect_Logger {
 	}
 
 	/**
-	 * Creates the custom database table during plugin activation.
+	 * Creates the custom database table during plugin activation or migration.
 	 *
-	 * This method is generally called from Wpfa_Mailconnect_Activator::activate().
+	 * This method is generally called from Wpfa_Mailconnect_Activator::activate()
+	 * and Wpfa_Mailconnect_Updater::run_migrations().
 	 *
 	 * @since 1.0.0
 	 */
@@ -54,7 +55,8 @@ class Wpfa_Mailconnect_Logger {
 		$table_name      = $wpdb->prefix . 'wpfa_mail_logs';
 		$charset_collate = $wpdb->get_charset_collate();
 
-		// Use dbDelta to safely create the table
+		// Use dbDelta to safely create or update the table schema.
+		// NOTE: The DB version is included as a comment for dbDelta to track schema changes.
 		$sql = "CREATE TABLE $table_name (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			to_email varchar(255) NOT NULL,
@@ -65,7 +67,8 @@ class Wpfa_Mailconnect_Logger {
 			created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
 			PRIMARY KEY (id),
 			KEY status (status)
-		) $charset_collate;";
+		) $charset_collate;
+		/* db_version " . WPFA_MAILCONNECT_DB_VERSION . " */"; // <-- Added DB version comment
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( $sql );
