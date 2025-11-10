@@ -66,7 +66,9 @@ class Wpfa_Mailconnect_Logger {
 			error_message text,
 			created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
 			PRIMARY KEY (id),
-			KEY status (status)
+			KEY status (status),
+            KEY created_at (created_at),
+            KEY to_email (to_email(191))
 		) $charset_collate;
 		/* db_version " . WPFA_MAILCONNECT_DB_VERSION . " */";
 
