@@ -68,7 +68,7 @@ class Wpfa_Mailconnect_Logger {
 			PRIMARY KEY (id),
 			KEY status (status)
 		) $charset_collate;
-		/* db_version " . WPFA_MAILCONNECT_DB_VERSION . " */"; // <-- Added DB version comment
+		/* db_version " . WPFA_MAILCONNECT_DB_VERSION . " */";
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( $sql );
@@ -124,6 +124,11 @@ class Wpfa_Mailconnect_Logger {
 	 */
 	public function get_logs( $limit = 20, $offset = 0, $status = '', $search = '' ) {
 		global $wpdb;
+		
+		// SECURITY FIX: Ensure pagination variables are absolute positive integers.
+		$limit  = absint( $limit );
+		$offset = absint( $offset );
+        
 		$table_name = $this->log_table_name;
 		$where      = 'WHERE 1=1';
 		$params     = array();
