@@ -177,9 +177,13 @@ class Wpfa_Mailconnect_Logger {
 
 		$sql = "SELECT COUNT(*) FROM $table_name $where";
 
-		// Prepare and execute the query
-		$prepared_sql = $wpdb->prepare( $sql, $params );
-		$count        = $wpdb->get_var( $prepared_sql );
+        // Prepare and execute the query
+		if ( empty( $params ) ) {
+            $count = $wpdb->get_var( $sql );
+        } else {
+            $prepared_sql = $wpdb->prepare( $sql, $params );
+            $count        = $wpdb->get_var( $prepared_sql );
+        }
 
 		return (int) $count;
 	}
