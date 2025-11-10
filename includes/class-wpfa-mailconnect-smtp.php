@@ -33,6 +33,15 @@ class Wpfa_Mailconnect_SMTP {
     private static $logged_emails = array();
 
     /**
+     * Stores the error capture handler closure for later removal.
+     *
+     * @since 1.0.0
+     * @access protected
+     * @var callable|null $error_capture_handler_closure
+     */
+    protected $error_capture_handler_closure = null;
+
+    /**
      * Initialize the SMTP configuration class.
      *
      * @param string $plugin_name The plugin identifier.
@@ -282,19 +291,18 @@ class Wpfa_Mailconnect_SMTP {
         // Capture PHPMailer errors by registering a temporary handler.
         $error_message = '';
         
-        // Store the closure in a variable so we can remove it later.
-        $error_capture_handler = function( $error ) use ( &$error_message ) {
+        // Define and store the closure in the class property for reliable removal.
+        $this->error_capture_handler_closure = function( $error ) use ( &$error_message ) {
             $error_message = $error->get_error_message();
         };
 
-        // Add the temporary action hook
-        add_action( 'wp_mail_failed', $error_capture_handler );
+        // Add the action using the stored closure property.
+        add_action( 'wp_mail_failed', $this->error_capture_handler_closure );
 
         $success = wp_mail( $recipient, $subject, $body, $headers );
         
-        // Crucial: Remove the action hook immediately after wp_mail() is done
-        // to prevent duplicate hooks from accumulating on subsequent submissions.
-        remove_action( 'wp_mail_failed', $error_capture_handler );
+        // Reliably remove the action using the stored closure property.
+        remove_action( 'wp_mail_failed', $this->error_capture_handler_closure );
         
         // If wp_mail failed and the handler didn't capture the error, check PHPMailer directly.
         if ( ! $success && empty( $error_message ) ) {
