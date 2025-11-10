@@ -79,7 +79,8 @@ class Wpfa_Mailconnect {
 		if ( defined( 'WPFA_MAILCONNECT_VERSION' ) ) {
 			$this->version = WPFA_MAILCONNECT_VERSION;
 		} else {
-			$this->version = '1.0.0';
+			// Updated to 1.1.0 to reflect logging and cleanup features.
+			$this->version = '1.1.0';
 		}
 		$this->plugin_name = 'wpfa-mailconnect';
 
@@ -131,6 +132,11 @@ class Wpfa_Mailconnect {
 		 * side of the site.
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-wpfa-mailconnect-public.php';
+		
+		/**
+		 * The class responsible for handling all database logging.
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-wpfa-mailconnect-logger.php';
 
 		/**
 		 * The class responsible for SMTP settings and functionality
@@ -183,6 +189,9 @@ class Wpfa_Mailconnect {
 		// Add email logging hooks
 		$this->loader->add_filter( 'wp_mail', $this->smtp, 'log_email_on_send', 10, 1 );
 		$this->loader->add_action( 'wp_mail_failed', $this->smtp, 'log_email_failure', 10, 1 );
+
+		// Register the scheduled action for log cleanup
+		$this->loader->add_action( 'wpfa_mailconnect_cleanup_logs', $this->smtp, 'cleanup_old_logs' );
 
         // Instantiate the Updater and register its migration check hook.
         $updater = new Wpfa_Mailconnect_Updater();

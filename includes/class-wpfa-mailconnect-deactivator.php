@@ -23,14 +23,13 @@
 class Wpfa_Mailconnect_Deactivator {
 
 	/**
-	 * Short Description. (use period)
+	 * Clears the scheduled cron job for log cleanup.
 	 *
-	 * Long Description.
-	 *
-	 * @since    1.0.0
+	 * @since    1.1.0
 	 */
 	public static function deactivate() {
-
+		// Clear the scheduled daily log cleanup cron job
+		wp_clear_scheduled_hook( 'wpfa_mailconnect_cleanup_logs' );
 	}
 
 }

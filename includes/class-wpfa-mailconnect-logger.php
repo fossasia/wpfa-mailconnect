@@ -210,4 +210,34 @@ class Wpfa_Mailconnect_Logger {
 		global $wpdb;
 		return $wpdb->query( "TRUNCATE TABLE {$this->log_table_name}" );
 	}
+
+	/**
+	 * Deletes log entries older than a specified number of days.
+	 *
+	 * This method is called by the daily WP Cron job established in Wpfa_Mailconnect_SMTP.
+	 *
+	 * @since 1.1.0
+	 * @param int $days The number of days to keep logs for. Logs older than this will be deleted.
+	 * @return int|false The number of deleted rows on success, or false on failure.
+	 */
+	public function clear_old_logs( $days ) {
+		global $wpdb;
+
+		$days = absint( $days );
+
+		if ( $days <= 0 ) {
+			return 0; // Don't delete anything if retention is 0 or invalid
+		}
+
+		// Calculate the cutoff date (current time minus $days days)
+		// Use DATETIME field created_at and DATE_SUB for efficiency.
+		$sql = $wpdb->prepare(
+			"DELETE FROM {$this->log_table_name}
+			WHERE created_at < DATE_SUB(NOW(), INTERVAL %d DAY)",
+			$days
+		);
+
+		// $wpdb->query returns the number of rows affected (deleted) or false on error.
+		return $wpdb->query( $sql );
+	}
 }

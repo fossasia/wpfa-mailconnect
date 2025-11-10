@@ -4,12 +4,20 @@
  * SMTP configuration and management class.
  *
  * Handles SMTP settings registration, admin UI rendering,
- * test email functionality, and PHPMailer configuration.
+ * test email functionality, log cleanup scheduling, and PHPMailer configuration.
  *
  * @author Ubayed Bin Sufian
  * @since 1.0.0
+ * @version 1.1.0
  */
 class Wpfa_Mailconnect_SMTP {
+
+	/**
+	 * WP Cron event hook for log cleanup.
+	 *
+	 * @since 1.1.0
+	 */
+	const CLEANUP_CRON_HOOK = 'wpfa_mailconnect_cleanup_logs';
 
     /**
      * Plugin id and version from main class
@@ -28,7 +36,7 @@ class Wpfa_Mailconnect_SMTP {
     private $logger;    
 
     /**
-     * Track logged emails to prevent duplicates
+     * Track logged emails to prevent duplicates (when using the 'wp_mail' filter)
      */
     private static $logged_emails = array();
 
@@ -49,20 +57,27 @@ class Wpfa_Mailconnect_SMTP {
      */
     public function __construct( $plugin_name, $version ) {
         $this->plugin_name = $plugin_name;
-        $this->version = $version;
+        $this->version     = $version;
 
-        $this->fields = array(
-            'smtp_user'   => array( 'label' => 'SMTP User Email', 'default' => 'youremail@example.com', 'type' => 'text' ),
-            'smtp_pass'   => array( 'label' => 'SMTP Password/App Key', 'default' => 'yourpassword', 'type' => 'password' ),
-            'smtp_host'   => array( 'label' => 'SMTP Host', 'default' => 'smtp.gmail.com', 'type' => 'text' ),
-            'smtp_from'   => array( 'label' => 'SMTP From Email Address', 'default' => 'youremail@example.com', 'type' => 'text' ),
-            'smtp_name'   => array( 'label' => 'SMTP User Name', 'default' => get_bloginfo( 'name' ), 'type' => 'text' ),
-            'smtp_port'   => array( 'label' => 'SMTP Port', 'default' => '587', 'type' => 'number' ),
-            'smtp_secure' => array( 'label' => 'Encryption', 'default' => 'tls', 'type' => 'select', 'options' => array( 'tls' => 'TLS (Recommended)', 'ssl' => 'SSL', '' => 'None' ) ),
-            'smtp_auth'   => array( 'label' => 'Authentication Required?', 'default' => '1', 'type' => 'select', 'options' => array( '1' => 'Yes', '0' => 'No' ) ),
-        );
+		// Existing SMTP fields, plus new logging fields for v1.1.0
+		$this->fields = array(
+			'smtp_user'            => array( 'label' => 'SMTP User Email', 'default' => 'youremail@example.com', 'type' => 'text' ),
+			'smtp_pass'            => array( 'label' => 'SMTP Password/App Key', 'default' => 'yourpassword', 'type' => 'password' ),
+			'smtp_host'            => array( 'label' => 'SMTP Host', 'default' => 'smtp.gmail.com', 'type' => 'text' ),
+			'smtp_from'            => array( 'label' => 'SMTP From Email Address', 'default' => 'youremail@example.com', 'type' => 'text' ),
+			'smtp_name'            => array( 'label' => 'SMTP User Name', 'default' => get_bloginfo( 'name' ), 'type' => 'text' ),
+			'smtp_port'            => array( 'label' => 'SMTP Port', 'default' => '587', 'type' => 'number' ),
+			'smtp_secure'          => array( 'label' => 'Encryption', 'default' => 'tls', 'type' => 'select', 'options' => array( 'tls' => 'TLS (Recommended)', 'ssl' => 'SSL', '' => 'None' ) ),
+			'smtp_auth'            => array( 'label' => 'Authentication Required?', 'default' => '1', 'type' => 'select', 'options' => array( '1' => 'Yes', '0' => 'No' ) ),
+			'enable_log'           => array( 'label' => 'Enable Email Logging', 'default' => '1', 'type' => 'checkbox', 'description' => 'Uncheck this to stop logging all emails sent by the plugin.' ),
+			'log_retention_days'   => array( 'label' => 'Log Retention Days', 'default' => '90', 'type' => 'number', 'description' => 'Automatically delete logs older than this many days (0 for never).' ),
+		);
 
+		// Assuming Wpfa_Mailconnect_Logger class is autoloaded or required elsewhere.
         $this->logger = new Wpfa_Mailconnect_Logger();
+		
+		// Hook the log cleanup function to the custom cron event
+		add_action( self::CLEANUP_CRON_HOOK, array( $this, 'do_log_cleanup' ) );
     }
 
     /* --- Admin menu / settings registration --- */
@@ -85,14 +100,15 @@ class Wpfa_Mailconnect_SMTP {
 	/**
 	 * Initialize and register plugin settings, sections, and fields.
 	 *
-	 * Registers the settings group, adds the core SMTP credentials section
-	 * and the test email section, then registers each configured field.
+	 * Registers the settings group, adds sections for credentials, logging, and testing,
+	 * then registers each configured field.
 	 *
 	 * @return void
 	 */
 	public function settings_init() {
 		register_setting( 'smtp_settings_group', 'smtp_options' );
 
+		// Core SMTP Credentials Section
 		add_settings_section(
 			'smtp_main_section',
 			__( 'Core SMTP Credentials', 'wpfa-mailconnect' ),
@@ -100,7 +116,12 @@ class Wpfa_Mailconnect_SMTP {
 			'smtp-config'
 		);
 
+		// Register core SMTP fields
         foreach ( $this->fields as $id => $args ) {
+            // Skip logging fields in the main section
+            if ( 'enable_log' === $id || 'log_retention_days' === $id ) {
+                continue;
+            }
             add_settings_field(
                 $id,
                 $args['label'],
@@ -111,6 +132,33 @@ class Wpfa_Mailconnect_SMTP {
             );
         }
 
+		// Email Logging & Retention Section
+		add_settings_section(
+			'smtp_logging_section',
+			__( 'Email Logging & Retention', 'wpfa-mailconnect' ),
+			array( $this, 'logging_section_callback' ),
+			'smtp-config'
+		);
+		
+		// Register logging fields
+		add_settings_field(
+			'enable_log',
+			$this->fields['enable_log']['label'],
+			array( $this, 'render_field' ),
+			'smtp-config',
+			'smtp_logging_section',
+			array_merge( $this->fields['enable_log'], array( 'id' => 'enable_log' ) )
+		);
+		add_settings_field(
+			'log_retention_days',
+			$this->fields['log_retention_days']['label'],
+			array( $this, 'render_field' ),
+			'smtp-config',
+			'smtp_logging_section',
+			array_merge( $this->fields['log_retention_days'], array( 'id' => 'log_retention_days' ) )
+		);
+
+		// Send Test Email Section
 		add_settings_section(
 			'smtp_test_section',
 			__( 'Send a Test Email', 'wpfa-mailconnect' ),
@@ -120,20 +168,26 @@ class Wpfa_Mailconnect_SMTP {
 	}
 
 	/**
-	 * Callback for the main settings section description.
-	 *
-	 * Outputs a short description displayed above the SMTP credentials fields.
+	 * Callback for the main SMTP settings section description.
 	 *
 	 * @return void
 	 */
 	public function section_callback() {
 		echo '<p>' . esc_html__( 'Enter your SMTP credentials below. These settings will override the default WordPress email behavior.', 'wpfa-mailconnect' ) . '</p>';
 	}
+	
+	/**
+	 * Callback for the new logging settings section description.
+	 *
+	 * @since 1.1.0
+	 * @return void
+	 */
+	public function logging_section_callback() {
+		echo '<p>' . esc_html__( 'Control how emails are logged and manage data retention.', 'wpfa-mailconnect' ) . '</p>';
+	}
 
 	/**
 	 * Callback for the test section description.
-	 *
-	 * Outputs a short description displayed above the test email form.
 	 *
 	 * @return void
 	 */
@@ -144,21 +198,20 @@ class Wpfa_Mailconnect_SMTP {
 	/**
 	 * Renders an individual settings field.
 	 *
-	 * Supports text, password, number and select field types. Retrieves the
-	 * current option value and outputs the corresponding input element.
+	 * Supports text, password, number, select, and checkbox field types.
 	 *
 	 * @param array $args Field definition and metadata (includes 'id', 'type', 'default', etc.).
 	 * @return void
 	 */
-	public function render_field( $args ) {
-		$options = get_option( 'smtp_options', array() );
-		$id      = sanitize_key( $args['id'] );
-		if ( isset( $args['type'] ) && 'password' === $args['type'] ) {
-			// Always leave password blank by default for security
-			$value = isset( $options[ $id ] ) ? $options[ $id ] : '';
-		} else {
-			$value = isset( $options[ $id ] ) ? $options[ $id ] : $args['default'];
-		}
+    public function render_field( $args ) {
+        $options = get_option( 'smtp_options', array() );
+        $id      = sanitize_key( $args['id'] );
+        $value   = isset( $options[ $id ] ) ? $options[ $id ] : $args['default']; // Default used for most fields
+        
+        // Special handling for passwords (leave blank if not set, otherwise use saved)
+        if ( isset( $args['type'] ) && 'password' === $args['type'] ) {
+            $value = isset( $options[ $id ] ) ? $options[ $id ] : '';
+        } 
 
         if ( isset( $args['type'] ) && 'select' === $args['type'] ) {
             echo '<select id="' . esc_attr( $id ) . '" name="smtp_options[' . esc_attr( $id ) . ']">';
@@ -171,17 +224,34 @@ class Wpfa_Mailconnect_SMTP {
                 );
             }
             echo '</select>';
-            return;
-        }
+        } elseif ( isset( $args['type'] ) && 'checkbox' === $args['type'] ) {
+            // Checkbox handling: value is 1 if checked, 0 if not set/unchecked
+            // Checkbox value should be compared against '1' since that's the saved value.
+            $checked = ( '1' === $value || true === $value );
+            printf(
+                '<input type="hidden" name="smtp_options[%s]" value="0" />', // Hidden field for unchecked state
+                esc_attr( $id )
+            );
+            printf(
+                '<input type="checkbox" id="%s" name="smtp_options[%s]" value="1" %s />',
+                esc_attr( $id ),
+                esc_attr( $id ),
+                checked( $checked, true, false )
+            );
+            } else {
+                // text/password/number
+                printf(
+                    '<input type="%s" id="%s" name="smtp_options[%s]" value="%s" class="regular-text" />',
+                    esc_attr( $args['type'] ),
+                    esc_attr( $id ),
+                    esc_attr( $id ),
+                    esc_attr( $value )
+                );
+            }
 
-        // text/password/number
-        printf(
-            '<input type="%s" id="%s" name="smtp_options[%s]" value="%s" class="regular-text" />',
-            esc_attr( $args['type'] ),
-            esc_attr( $id ),
-            esc_attr( $id ),
-            esc_attr( $value )
-        );
+        if ( isset( $args['description'] ) ) {
+            printf( '<p class="description">%s</p>', esc_html( $args['description'] ) );
+        }
     }
 
 	/**
@@ -216,6 +286,59 @@ class Wpfa_Mailconnect_SMTP {
         </div>
         <?php
     }
+	
+	/* --- Cron scheduling for log retention --- */
+	
+	/**
+	 * Schedules the daily log cleanup event.
+	 *
+	 * Should be called upon plugin activation or settings update to ensure cron is running.
+	 *
+	 * @since 1.1.0
+	 * @return void
+	 */
+	public static function schedule_log_cleanup() {
+		if ( ! wp_next_scheduled( self::CLEANUP_CRON_HOOK ) ) {
+			wp_schedule_event( time(), 'daily', self::CLEANUP_CRON_HOOK );
+		}
+	}
+
+	/**
+	 * Unschedules the daily log cleanup event.
+	 *
+	 * Should be called upon plugin deactivation.
+	 *
+	 * @since 1.1.0
+	 * @return void
+	 */
+	public static function unschedule_log_cleanup() {
+		$timestamp = wp_next_scheduled( self::CLEANUP_CRON_HOOK );
+		if ( $timestamp ) {
+			wp_unschedule_event( $timestamp, self::CLEANUP_CRON_HOOK );
+		}
+	}
+
+	/**
+	 * Executes the log cleanup based on the retention setting.
+	 *
+	 * Hooked to the CLEANUP_CRON_HOOK event.
+	 *
+	 * @since 1.1.0
+	 * @return void
+	 */
+	public function do_log_cleanup() {
+		// Ensure logging is enabled and retention is set
+		$options = get_option( 'smtp_options', array() );
+        // Default to true if not set, but ensure it's a boolean check on the saved value ('1' or '0').
+		$enabled = isset( $options['enable_log'] ) ? (bool) $options['enable_log'] : true; // Default to true if not set
+		$days 	 = isset( $options['log_retention_days'] ) ? absint( $options['log_retention_days'] ) : 90;
+
+		// Only proceed if logging is enabled AND a retention period > 0 is set
+		if ( $enabled && $days > 0 ) {
+			$this->logger->clear_old_logs( $days );
+		}
+	}
+
 
     /* --- Test email form & handler --- */
 
@@ -282,19 +405,28 @@ class Wpfa_Mailconnect_SMTP {
 			get_bloginfo( 'name' )
 		);
 		$body    = sprintf(
-			/* translators: %s: Blog name */
+			/* translators: %s: Plugin name */
 			__( 'Congratulations! If you receive this email, your SMTP settings are configured correctly using the %s plugin.', 'wpfa-mailconnect' ),
-			get_bloginfo( 'name' )
+			esc_html( $this->plugin_name )
 		);
         $headers = array( 'Content-Type: text/html; charset=UTF-8' );
 
-        // Capture PHPMailer errors by registering a temporary handler.
-        $error_message = '';
-        
-        // Define and store the closure in the class property for reliable removal.
-        $this->error_capture_handler_closure = function( $error ) use ( &$error_message ) {
-            $error_message = $error->get_error_message();
-        };
+		// Capture PHPMailer errors by registering a temporary handler.
+		$error_message = '';
+		
+		// Define and store the closure in the class property for reliable removal.
+		$this->error_capture_handler_closure = function( $error ) use ( &$error_message ) {
+			// Extract PHPMailer error info if available, otherwise use general error message.
+			$error_message = $error->get_error_message();
+
+			// Fallback to global PHPMailer object if specific error message is generic
+			global $phpmailer;
+			if ( empty( $error_message ) || strpos( $error_message, 'could not be sent' ) !== false ) {
+				if ( ! empty( $phpmailer->ErrorInfo ) ) {
+					$error_message = $phpmailer->ErrorInfo;
+				}
+			}
+		};
 
         // Add the action using the stored closure property.
         add_action( 'wp_mail_failed', $this->error_capture_handler_closure );
@@ -303,8 +435,8 @@ class Wpfa_Mailconnect_SMTP {
         
         // Reliably remove the action using the stored closure property.
         remove_action( 'wp_mail_failed', $this->error_capture_handler_closure );
-        
-        // If wp_mail failed and the handler didn't capture the error, check PHPMailer directly.
+
+        // If wp_mail failed and the handler didn't capture the error, check PHPMailer directly as a final fallback.
         if ( ! $success && empty( $error_message ) ) {
             global $phpmailer;
             if ( ! empty( $phpmailer->ErrorInfo ) ) {
@@ -312,7 +444,7 @@ class Wpfa_Mailconnect_SMTP {
             }
         }
 
-        // Log the test email attempt
+		// Log the test email attempt. This intentionally bypasses the enable_log check since it's an admin test.
         $this->logger->log_email(
             $recipient,
             $subject,
@@ -356,112 +488,144 @@ class Wpfa_Mailconnect_SMTP {
     public function phpmailer_override( $phpmailer ) {
         $options = get_option( 'smtp_options', array() );
 
-        $user   = isset( $options['smtp_user'] ) ? $options['smtp_user'] : '';
-        $pass   = isset( $options['smtp_pass'] ) ? $options['smtp_pass'] : '';
-        $host   = isset( $options['smtp_host'] ) ? $options['smtp_host'] : 'localhost';
-        $port   = isset( $options['smtp_port'] ) ? (int) $options['smtp_port'] : 25;
-        // Validate port range (1-65535)
-        if ( $port < 1 || $port > 65535 ) {
-            $port = 25; // fallback to default SMTP port
-        }
-        $secure = isset( $options['smtp_secure'] ) ? $options['smtp_secure'] : '';
-        $auth   = isset( $options['smtp_auth'] ) ? (bool) $options['smtp_auth'] : false;
-        $from   = isset( $options['smtp_from'] ) ? $options['smtp_from'] : get_option( 'admin_email' );
-        $name   = isset( $options['smtp_name'] ) ? $options['smtp_name'] : get_bloginfo( 'name' );
+		$user   = isset( $options['smtp_user'] ) ? trim( $options['smtp_user'] ) : '';
+		$pass   = isset( $options['smtp_pass'] ) ? $options['smtp_pass'] : '';
+		$host   = isset( $options['smtp_host'] ) ? trim( $options['smtp_host'] ) : 'localhost';
+		$port   = isset( $options['smtp_port'] ) ? (int) $options['smtp_port'] : 25;
+		// Validate port range (1-65535)
+		if ( $port < 1 || $port > 65535 ) {
+			$port = 25; // fallback to default SMTP port
+		}
+		$secure = isset( $options['smtp_secure'] ) ? $options['smtp_secure'] : '';
+		$auth   = isset( $options['smtp_auth'] ) ? (bool) $options['smtp_auth'] : false;
+		$from   = isset( $options['smtp_from'] ) ? trim( $options['smtp_from'] ) : get_option( 'admin_email' );
+		$name   = isset( $options['smtp_name'] ) ? $options['smtp_name'] : get_bloginfo( 'name' );
 
-        if ( ! empty( $user ) && ! empty( $host ) ) {
-            $phpmailer->isSMTP();
-            $phpmailer->Host       = $host;
-            $phpmailer->SMTPAuth   = $auth;
-            $phpmailer->Port       = $port;
-            $phpmailer->Username   = $user;
-            $phpmailer->Password   = $pass;
-            $phpmailer->SMTPSecure = $secure;
+		// Only apply SMTP settings if the necessary credentials are provided
+		if ( ! empty( $user ) && ! empty( $host ) ) {
+			$phpmailer->isSMTP();
+			$phpmailer->Host       = $host;
+			$phpmailer->SMTPAuth   = $auth;
+			$phpmailer->Port       = $port;
+			$phpmailer->Username   = $user;
+			$phpmailer->Password   = $pass;
+			$phpmailer->SMTPSecure = $secure;
 
-            // Validate 'From' email address before assignment
-            if ( filter_var( $from, FILTER_VALIDATE_EMAIL ) ) {
-                $phpmailer->From = $from;
-            } else {
-                // Optionally set a default or handle invalid email
-                $phpmailer->From = get_option( 'admin_email' );
-                // Optionally log the error or notify admin
-                error_log( 'WPFA MailConnect SMTP: Invalid "From" email address provided: ' . $from );
-            }
-            $phpmailer->FromName   = $name;
-        }
+			// Validate 'From' email address before assignment
+			if ( filter_var( $from, FILTER_VALIDATE_EMAIL ) ) {
+				$phpmailer->From = $from;
+			} else {
+				// Fallback to default WordPress email if configured 'From' is invalid
+				$phpmailer->From = get_option( 'admin_email' );
+				error_log( 'WPFA MailConnect SMTP: Invalid "From" email address provided in settings: ' . $from );
+			}
+			$phpmailer->FromName   = $name;
+		}
 
         // Disable debug output
         $phpmailer->SMTPDebug = 0;
     }
 
-    /**
-     * Log email using wp_mail filter
-     * This hook fires before wp_mail sends, allowing us to capture data without blocking
-     */
-    public function log_email_on_send( $args ) {
-        // Extract email data from args
-        $to      = isset( $args['to'] ) ? $args['to'] : '';
-        $subject = isset( $args['subject'] ) ? $args['subject'] : 'No Subject';
-        $message = isset( $args['message'] ) ? $args['message'] : '';
-        
-        // Handle 'to' field - can be string or array
-        $to_string = '';
-        if ( is_array( $to ) ) {
-            $to_string = implode( ', ', $to );
-        } else {
-            $to_string = $to;
-        }
-        
-        // Create hash to prevent duplicate logging (based on recipient and subject)
-        $hash = md5( $to_string . $subject );
-        
-        // Only log if we haven't logged this exact email recently
-        if ( ! isset( self::$logged_emails[$hash] ) ) {
-            self::$logged_emails[ $hash ] = true;
-            
-            // Log with 'success' status
-            $this->logger->log_email(
-                $to_string,
-                $subject,
-                $message,
-                'success',
-                ''
-            );
-            
-            // Clean up old hashes
-            if ( count( self::$logged_emails ) > 20 ) {
-                self::$logged_emails = array_slice( self::$logged_emails, -10, 10, true );
-            }
-        }
-        
-        // MUST return the args unchanged for wp_mail to work
-        return $args;
-    }
+	/* --- Email Logging Hooks --- */
 
-    /**
-     * Log failed emails
-     */
-    public function log_email_failure( $wp_error ) {
+	/**
+	 * Log email using wp_mail filter before it attempts to send.
+	 * Logged as 'success' here, corrected to 'failed' if wp_mail_failed fires later.
+	 *
+	 * @param array $args Arguments passed to wp_mail (to, subject, message, headers, attachments).
+	 * @return array The original arguments, unchanged.
+	 */
+	public function log_email_on_send( $args ) {
+		$options = get_option( 'smtp_options', array() );
+		$enabled = isset( $options['enable_log'] ) ? (bool) $options['enable_log'] : true; // Default to enabled
+
+		// Early exit if logging is disabled
+		if ( ! $enabled ) {
+			return $args;
+		}
+
+		// Extract email data from args
+		$to      = isset( $args['to'] ) ? $args['to'] : '';
+		$subject = isset( $args['subject'] ) ? $args['subject'] : 'No Subject';
+		$message = isset( $args['message'] ) ? $args['message'] : '';
+		
+		// Handle 'to' field - can be string or array
+		$to_string = '';
+		if ( is_array( $to ) ) {
+			$to_string = implode( ', ', $to );
+		} else {
+			$to_string = $to;
+		}
+		
+		// Create hash to prevent duplicate logging (based on recipient and subject)
+		$hash = md5( $to_string . $subject );
+		
+		// Only log if we haven't logged this exact email recently
+		if ( ! isset( self::$logged_emails[$hash] ) ) {
+			self::$logged_emails[ $hash ] = time(); // Store time to potentially implement time-based cleanup
+			
+			// Log with 'success' status (assumed to succeed until failure hook runs)
+			$this->logger->log_email(
+				$to_string,
+				$subject,
+				$message,
+				'success',
+				''
+			);
+			
+			// Clean up old hashes (keep only the 10 most recent hashes to prevent memory bloat)
+			if ( count( self::$logged_emails ) > 20 ) {
+				// Only keep the most recent 10 (sorted by key as keys are md5 hashes, or sort by time if implemented)
+				// Given keys are hashes, simply use array_slice on the end for simplicity in this pattern.
+				self::$logged_emails = array_slice( self::$logged_emails, -10, 10, true );
+			}
+		}
+		
+		// MUST return the args unchanged for wp_mail to work
+		return $args;
+	}
+
+	/**
+	 * Log failed emails.
+	 *
+	 * This hook fires after wp_mail fails and attempts to update the log status.
+	 *
+	 * @param WP_Error $wp_error The error object returned by wp_mail().
+	 * @return void
+	 */
+	public function log_email_failure( $wp_error ) {
+		$options = get_option( 'smtp_options', array() );
+		$enabled = isset( $options['enable_log'] ) ? (bool) $options['enable_log'] : true; // Default to enabled
+
+		// Early exit if logging is disabled
+		if ( ! $enabled ) {
+			return;
+		}
+
         $error_data = $wp_error->get_error_data();
 
-        $to      = 'Unknown';
-        $subject = 'Unknown';
-        $message = '';
-        
-        if ( is_array( $error_data ) ) {
-            if ( isset( $error_data['to'] ) ) {
-                $to = is_array( $error_data['to'] ) ? implode( ', ', $error_data['to'] ) : $error_data['to'];
-            }
-            $subject = isset( $error_data['subject'] ) ? $error_data['subject'] : 'Unknown';
-            $message = isset( $error_data['message'] ) ? $error_data['message'] : '';
-        }
-        
-        $this->logger->log_email(
-            $to,
-            $subject,
-            $message,
-            'failed',
-            $wp_error->get_error_message()
-        );
-    }
+		$to      = 'Unknown';
+		$subject = 'Unknown';
+		$message = '';
+		
+		if ( is_array( $error_data ) ) {
+			if ( isset( $error_data['to'] ) ) {
+				$to = is_array( $error_data['to'] ) ? implode( ', ', $error_data['to'] ) : $error_data['to'];
+			}
+			$subject = isset( $error_data['subject'] ) ? $error_data['subject'] : 'Unknown';
+			$message = isset( $error_data['message'] ) ? $error_data['message'] : '';
+		}
+		
+		// The original log entry created by log_email_on_send needs to be found and updated.
+		// Since the Logger class is responsible for this logic, we call log_email with the failure status.
+		// It is assumed the Logger implementation will find the most recent matching 'success' log entry
+		// based on recipient/subject and update its status to 'failed' with the error message.
+		$this->logger->log_email(
+			$to,
+			$subject,
+			$message,
+			'failed',
+			$wp_error->get_error_message()
+		);
+	}
 }

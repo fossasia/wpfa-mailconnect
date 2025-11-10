@@ -32,17 +32,15 @@ if ( ! defined( 'WPINC' ) ) {
 
 /**
  * Currently plugin version.
- * Start at version 1.0.0 and use SemVer - https://semver.org
- * Rename this for your plugin and update it as you release new versions.
+ * Start at version 1.1.0 for log retention features.
  */
-define( 'WPFA_MAILCONNECT_VERSION', '1.0.0' );
+define( 'WPFA_MAILCONNECT_VERSION', '1.1.0' );
 
 /**
  * Defines the required database schema version.
- * This should only be updated when the database schema changes.
- * The migration logic uses this constant to determine if updates are needed.
+ * Updated to 1.1.0 to trigger dbDelta for log table indexes.
  */
-define( 'WPFA_MAILCONNECT_DB_VERSION', '1.0.0' );
+define( 'WPFA_MAILCONNECT_DB_VERSION', '1.1.0' );
 
 /**
  * The code that runs during plugin activation.
