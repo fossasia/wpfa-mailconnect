@@ -152,6 +152,8 @@ class Wpfa_Mailconnect_Admin {
 
 		// Filtering parameters
 		$filter_status  = isset( $_GET['status'] ) ? sanitize_text_field( $_GET['status'] ) : '';
+        // SECURITY FIX: Explicitly validate 'status' against allowed values.
+        $filter_status = in_array( $filter_status, array( 'success', 'failed' ), true ) ? $filter_status : '';
 		$filter_search  = isset( $_GET['s'] ) ? sanitize_text_field( $_GET['s'] ) : '';
 
         // Get paginated and filtered logs and total count
