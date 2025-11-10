@@ -137,17 +137,19 @@ class Wpfa_Mailconnect_Logger {
 			$params[] = '%' . $wpdb->esc_like( $search ) . '%';
 		}
 
-		// Pagination parameters
-		$sql = "SELECT * FROM $table_name $where ORDER BY created_at DESC LIMIT %d OFFSET %d";
+        // Build the WHERE clause portion
+        $sql = "SELECT * FROM $table_name $where ORDER BY created_at DESC";
 
-		$params[] = $limit;
-		$params[] = $offset;
+        // Prepare WHERE clause if there are filter parameters
+        if ( ! empty( $params ) ) {
+            $sql = $wpdb->prepare( $sql, $params );
+        }
 
-		// Prepare and execute the query
-		$prepared_sql = $wpdb->prepare( $sql, $params );
+        // Add pagination (always present, so always safe to prepare)
+        $sql .= $wpdb->prepare( " LIMIT %d OFFSET %d", $limit, $offset );
 
-		return $wpdb->get_results( $prepared_sql );
-	}
+        return $wpdb->get_results( $sql );
+    }
 
 	/**
 	 * Gets the total count of email logs, respecting filters.
