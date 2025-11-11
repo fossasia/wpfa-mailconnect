@@ -69,8 +69,10 @@ class Wpfa_Mailconnect_Logger {
 			KEY status (status),
             KEY created_at (created_at),
             KEY to_email (to_email(191))
-		) $charset_collate;
-		/* db_version " . WPFA_MAILCONNECT_DB_VERSION . " */";
+		) $charset_collate;";
+		
+		// Concatenate the DB version comment, ensuring the constant is evaluated by PHP
+		$sql .= " /* db_version " . WPFA_MAILCONNECT_DB_VERSION . " */";
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( $sql );
