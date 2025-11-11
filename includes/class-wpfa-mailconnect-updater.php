@@ -105,7 +105,9 @@ class Wpfa_Mailconnect_Updater {
                     $this->update_db_version( $version );
                 } else {
                     // Log an error if a migration method is defined but missing
-                    error_log( sprintf( 'WPFA MailConnect Updater Error: Migration method %s missing for version %s.', $method, $version ) );
+                    if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                        error_log( sprintf( 'WPFA MailConnect Updater Error: Migration method %s missing for version %s.', $method, $version ) );
+                    }
                 }
             }
         }
@@ -135,7 +137,9 @@ class Wpfa_Mailconnect_Updater {
         // Run the table creation/check routine to apply any minor schema changes
         Wpfa_Mailconnect_Logger::create_log_table();
         
-        error_log( 'WPFA MailConnect Database migrated to 1.0.1.' );
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            error_log( 'WPFA MailConnect Database migrated to 1.0.1.' );
+        }
     }
 
 }
