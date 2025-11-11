@@ -203,11 +203,14 @@ class Wpfa_Mailconnect_SMTP {
     public function render_field( $args ) {
         $options = get_option( 'smtp_options', array() );
         $id      = sanitize_key( $args['id'] );
-        $value   = isset( $options[ $id ] ) ? $options[ $id ] : $args['default']; // Default used for most fields
-        
-        // Special handling for passwords (leave blank if not set, otherwise use saved)
+		
+		// Check type first, then set value once
         if ( isset( $args['type'] ) && 'password' === $args['type'] ) {
+			// Password fields: use saved value or empty string (never show default)
             $value = isset( $options[ $id ] ) ? $options[ $id ] : '';
+		} else {
+			// All other fields: use saved value or default
+			$value = isset( $options[ $id ] ) ? $options[ $id ] : $args['default'];
         } 
 
         if ( isset( $args['type'] ) && 'select' === $args['type'] ) {
@@ -223,7 +226,6 @@ class Wpfa_Mailconnect_SMTP {
             echo '</select>';
         } elseif ( isset( $args['type'] ) && 'checkbox' === $args['type'] ) {
             // Checkbox handling: value is 1 if checked, 0 if not set/unchecked
-            // Checkbox value should be compared against '1' since that's the saved value.
             $checked = ( '1' === $value || true === $value );
             printf(
                 '<input type="hidden" name="smtp_options[%s]" value="0" />', // Hidden field for unchecked state
