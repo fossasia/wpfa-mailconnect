@@ -194,8 +194,8 @@ class Wpfa_Mailconnect {
 		$this->loader->add_action( 'wpfa_mailconnect_cleanup_logs', $this->smtp, 'do_log_cleanup' );
 
         // Instantiate the Updater and register its migration check hook.
-        $updater = new Wpfa_Mailconnect_Updater();
-        $this->loader->add_action( 'admin_init', $updater, 'check_for_updates' ); 
+        $this->updater = new Wpfa_Mailconnect_Updater();
+		$this->loader->add_action( 'admin_init', $this->updater, 'check_for_updates' ); 
 	}
 
 	/**
