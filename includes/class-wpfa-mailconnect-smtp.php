@@ -570,11 +570,11 @@ class Wpfa_Mailconnect_SMTP {
 				''
 			);
 			
-			// Clean up old hashes (keep only the 10 most recent hashes to prevent memory bloat)
+			// Clean up old hashes (keep only the 20 most recent hashes to prevent memory bloat)
 			if ( count( self::$logged_emails ) > 20 ) {
-				// Only keep the most recent 10 (sorted by key as keys are md5 hashes, or sort by time if implemented)
+				// Only keep the most recent 20 (sorted by key as keys are md5 hashes, or sort by time if implemented)
 				// Given keys are hashes, simply use array_slice on the end for simplicity in this pattern.
-				self::$logged_emails = array_slice( self::$logged_emails, -10, 10, true );
+				self::$logged_emails = array_slice( self::$logged_emails, -20, 20, true );
 			}
 		}
 		
