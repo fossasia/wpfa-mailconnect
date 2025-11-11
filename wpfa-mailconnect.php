@@ -32,7 +32,7 @@ if ( ! defined( 'WPINC' ) ) {
 
 /**
  * Currently plugin version.
- * Start at version 1.1.0 for log retention features.
+ * Updated to version 1.1.0 to add log retention features.
  */
 define( 'WPFA_MAILCONNECT_VERSION', '1.1.0' );
 
