@@ -176,17 +176,21 @@ class Wpfa_Mailconnect_Admin {
             <?php endif; ?>
 
 			<?php
-			$clear_logs_url = admin_url( 'admin-post.php?action=clear_email_logs' );
-			$nonce_url      = wp_nonce_url( $clear_logs_url, 'clear_email_logs_nonce' );
-			$confirm_text   = esc_js( __( 'Are you sure you want to clear all email logs?', 'wpfa-mailconnect' ) );
+			// Generate nonce for the form
+			$clear_nonce  = wp_create_nonce( 'clear_email_logs_nonce' );
+			$confirm_text = esc_js( __( 'Are you sure you want to clear all email logs?', 'wpfa-mailconnect' ) );
 			?>
-			<p class="submit">
-				<a href="<?php echo esc_url( $nonce_url ); ?>" 
-					class="button button-delete"
-					onclick="return confirm('<?php echo $confirm_text; ?>');">
-					<?php esc_html_e( 'Clear All Logs', 'wpfa-mailconnect' ); ?>
-				</a>
-			</p>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display: inline;">
+				<input type="hidden" name="action" value="clear_email_logs" />
+				<input type="hidden" name="_wpnonce" value="<?php echo esc_attr( $clear_nonce ); ?>" />
+				<p class="submit">
+					<input type="submit" 
+						name="submit" 
+						class="button button-delete" 
+						value="<?php esc_attr_e( 'Clear All Logs', 'wpfa-mailconnect' ); ?>"
+						onclick="return confirm('<?php echo $confirm_text; ?>');" />
+				</p>
+			</form>
 
             <!-- Log Filter Form -->
             <form method="get" class="search-form">
@@ -278,7 +282,7 @@ class Wpfa_Mailconnect_Admin {
         }
 
 		// Security check: Use wp_verify_nonce for the action's nonce
-		if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( $_GET['_wpnonce'], 'clear_email_logs_nonce' ) ) {
+		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( $_POST['_wpnonce'], 'clear_email_logs_nonce' ) ) {
             // Invalid nonce message
 			wp_die( esc_html__( 'Invalid nonce', 'wpfa-mailconnect' ) );
 		}
