@@ -191,7 +191,7 @@ class Wpfa_Mailconnect {
 		$this->loader->add_action( 'wp_mail_failed', $this->smtp, 'log_email_failure', 10, 1 );
 
 		// Register the scheduled action for log cleanup
-		$this->loader->add_action( 'wpfa_mailconnect_cleanup_logs', $this->smtp, 'cleanup_old_logs' );
+		$this->loader->add_action( 'wpfa_mailconnect_cleanup_logs', $this->smtp, 'do_log_cleanup' );
 
         // Instantiate the Updater and register its migration check hook.
         $updater = new Wpfa_Mailconnect_Updater();

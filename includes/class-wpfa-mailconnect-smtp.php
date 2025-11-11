@@ -75,9 +75,6 @@ class Wpfa_Mailconnect_SMTP {
 
 		// Assuming Wpfa_Mailconnect_Logger class is autoloaded or required elsewhere.
         $this->logger = new Wpfa_Mailconnect_Logger();
-		
-		// Hook the log cleanup function to the custom cron event
-		add_action( self::CLEANUP_CRON_HOOK, array( $this, 'do_log_cleanup' ) );
     }
 
     /* --- Admin menu / settings registration --- */
