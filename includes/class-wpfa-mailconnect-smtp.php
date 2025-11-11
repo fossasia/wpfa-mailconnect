@@ -69,7 +69,7 @@ class Wpfa_Mailconnect_SMTP {
 			'smtp_port'            => array( 'label' => 'SMTP Port', 'default' => '587', 'type' => 'number' ),
 			'smtp_secure'          => array( 'label' => 'Encryption', 'default' => 'tls', 'type' => 'select', 'options' => array( 'tls' => 'TLS (Recommended)', 'ssl' => 'SSL', '' => 'None' ) ),
 			'smtp_auth'            => array( 'label' => 'Authentication Required?', 'default' => '1', 'type' => 'select', 'options' => array( '1' => 'Yes', '0' => 'No' ) ),
-			'enable_log'           => array( 'label' => 'Enable Email Logging', 'default' => '1', 'type' => 'checkbox', 'description' => 'Uncheck this to stop logging all emails sent by the plugin.' ),
+			'enable_log'           => array( 'label' => 'Enable Email Logging', 'default' => '1', 'type' => 'checkbox', 'description' => 'Uncheck this to stop logging all emails sent through WordPress.' ),
 			'log_retention_days'   => array( 'label' => 'Log Retention Days', 'default' => '90', 'type' => 'number', 'description' => 'Automatically delete logs older than this many days (0 for never).' ),
 		);
 
