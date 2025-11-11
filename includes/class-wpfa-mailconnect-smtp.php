@@ -329,7 +329,7 @@ class Wpfa_Mailconnect_SMTP {
 		// Ensure logging is enabled and retention is set
 		$options = get_option( 'smtp_options', array() );
         // Default to true if not set, but ensure it's a boolean check on the saved value ('1' or '0').
-		$enabled = isset( $options['enable_log'] ) ? (bool) $options['enable_log'] : true; // Default to true if not set
+		$enabled = isset( $options['enable_log'] ) ? (bool) $options['enable_log'] : true;
 		$days 	 = isset( $options['log_retention_days'] ) ? absint( $options['log_retention_days'] ) : 90;
 
 		// Only proceed if logging is enabled AND a retention period > 0 is set
