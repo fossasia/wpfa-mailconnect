@@ -103,7 +103,7 @@ class Wpfa_Mailconnect_SMTP {
 	 * @return void
 	 */
 	public function settings_init() {
-		register_setting( 'smtp_settings_group', 'smtp_options' );
+		register_setting( 'smtp_settings_group', 'smtp_options', array( 'sanitize_callback' => array( $this, 'sanitize_smtp_options' ) ) );
 
 		// Core SMTP Credentials Section
 		add_settings_section(
@@ -184,6 +184,53 @@ class Wpfa_Mailconnect_SMTP {
 	}
 
 	/**
+	 * Sanitizes and validates the input for the smtp_options settings group.
+	 *
+	 * Ensures that unchecked checkbox fields are set to '0' as their value is
+	 * omitted from the POST data when not using the hidden '0' field technique.
+	 *
+	 * @param array $input The submitted array of options.
+	 * @return array The sanitized array of options.
+	 */
+	public function sanitize_smtp_options( $input ) {
+		$output = get_option( 'smtp_options', array() );
+		
+		// Merge submitted data with current data to ensure non-submitted fields are retained
+		$output = array_merge( $output, $input );
+
+		// Check all fields defined in the class
+		foreach ( $this->fields as $id => $args ) {
+			// If the field is a checkbox, we must explicitly set '0' if it's missing from submission
+			if ( 'checkbox' === $args['type'] ) {
+				if ( ! isset( $input[ $id ] ) ) {
+					// Checkbox was unchecked and not submitted, force value to '0'
+					$output[ $id ] = '0';
+				} else {
+					// Checkbox was submitted (must be '1'), sanitize its value
+					$output[ $id ] = $input[ $id ] == '1' ? '1' : '0';
+				}
+			} else {
+				// Handle sanitization for other field types (optional but recommended)
+				if ( isset( $input[ $id ] ) ) {
+					switch ( $args['type'] ) {
+						case 'text':
+						case 'password':
+						case 'select':
+							$output[ $id ] = sanitize_text_field( $input[ $id ] );
+							break;
+						case 'number':
+							$output[ $id ] = absint( $input[ $id ] );
+							break;
+						// Add other types as needed
+					}
+				}
+			}
+		}
+
+		return $output;
+	}
+
+	/**
 	 * Callback for the test section description.
 	 *
 	 * @return void
@@ -228,16 +275,12 @@ class Wpfa_Mailconnect_SMTP {
             // Checkbox handling: value is 1 if checked, 0 if not set/unchecked
             $checked = ( '1' === $value || true === $value );
             printf(
-                '<input type="hidden" name="smtp_options[%s]" value="0" />', // Hidden field for unchecked state
-                esc_attr( $id )
-            );
-            printf(
                 '<input type="checkbox" id="%s" name="smtp_options[%s]" value="1" %s />',
                 esc_attr( $id ),
                 esc_attr( $id ),
                 checked( $checked, true, false )
             );
-            } else {
+        } else {
                 // text/password/number
                 printf(
                     '<input type="%s" id="%s" name="smtp_options[%s]" value="%s" class="regular-text" />',
