@@ -64,21 +64,6 @@ register_activation_hook( __FILE__, 'activate_wpfa_mailconnect' );
 register_deactivation_hook( __FILE__, 'deactivate_wpfa_mailconnect' );
 
 /**
- * Loads the plugin text domain for translation.
- *
- * @since 1.0.0
- */
-function wpfa_mailconnect_load_textdomain() {
-    load_plugin_textdomain(
-        'wpfa-mailconnect',
-        false,
-        dirname( plugin_basename( __FILE__ ) ) . '/languages/'
-    );
-}
-add_action( 'plugins_loaded', 'wpfa_mailconnect_load_textdomain' );
-
-
-/**
  * The core plugin class that is used to define internationalization,
  * admin-specific hooks, and public-facing site hooks.
  */
