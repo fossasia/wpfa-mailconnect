@@ -68,7 +68,7 @@ class Wpfa_Mailconnect_Logger {
 			PRIMARY KEY (id),
 			KEY status (status),
             KEY created_at (created_at),
-            -- The prefix length of 191 is used for utf8mb4 compatibility with older MySQL versions (767 bytes index limit)
+            /* The prefix length of 191 is used for utf8mb4 compatibility with older MySQL versions (767 bytes index limit) */
             KEY to_email (to_email(191))
 		) $charset_collate;";
 		
