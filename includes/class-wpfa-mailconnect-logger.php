@@ -72,6 +72,13 @@ class Wpfa_Mailconnect_Logger {
 				$wpdb->query( "ALTER TABLE $table_name ADD COLUMN status_details text AFTER error_message" );
 			}
 
+			// Check and add headers column if it doesn't exist (NEW CODE)
+			$column_exists = $wpdb->get_results( "SHOW COLUMNS FROM $table_name LIKE 'headers'" );
+			if ( empty( $column_exists ) ) {
+				// Using text (up to 65KB) for headers; change to longtext if headers can exceed 65KB.
+				$wpdb->query( "ALTER TABLE $table_name ADD COLUMN headers text AFTER status_details" ); 
+			}
+
 			return; // Exit early to avoid dbDelta issues
 		}
 
@@ -86,6 +93,7 @@ class Wpfa_Mailconnect_Logger {
 			status varchar(20) NOT NULL,
 			error_message text,
 			status_details text,
+			headers text,
 			created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
 			PRIMARY KEY (id),
 			UNIQUE KEY uniq_hash (hash),
@@ -128,17 +136,18 @@ class Wpfa_Mailconnect_Logger {
 		$message   = substr( $message, 0, 1048576 );
 		$body_html = substr( $body_html, 0, 1048576 );
 
-		// We now have 6 fields for insertion, plus two fields used for temporary metadata (headers and body_html).
+		// Corrected list of columns: hash, to_email, subject, message, body_html, status, error_message, headers, created_at
 		$result = $wpdb->query( $wpdb->prepare(
 			"INSERT INTO $table (hash, to_email, subject, message, body_html, status, error_message, created_at)
-			  SELECT %s, %s, %s, %s, %s, 'pending', %s, %s
+			  SELECT %s, %s, %s, %s, %s, 'pending', %s, %s, %s
 			WHERE NOT EXISTS (SELECT 1 FROM $table WHERE hash = %s)",
 			$hash,
 			$to,
 			$subject,
 			$message,
 			$body_html,
-			$headers, // Using error_message column temporarily to store headers metadata
+			'', 		// Empty error message for pending status
+			$headers, // Using headers column temporarily to store headers metadata
 			current_time('mysql'),
 			$hash
 		 ));
