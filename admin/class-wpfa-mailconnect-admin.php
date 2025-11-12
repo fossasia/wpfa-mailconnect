@@ -154,8 +154,7 @@ class Wpfa_Mailconnect_Admin {
 		$filter_status  = isset( $_GET['status'] ) ? sanitize_text_field( $_GET['status'] ) : '';
 		
 		// UPDATE: Explicitly validate 'status' against allowed values including 'pending'.
-		$allowed_statuses = array( 'pending', 'success', 'failed' );
-		$filter_status = in_array( $filter_status, $allowed_statuses, true ) ? $filter_status : '';
+		$filter_status = in_array( $filter_status, Wpfa_Mailconnect_Logger::ALLOWED_STATUSES, true ) ? $filter_status : '';
 
 		$filter_search  = isset( $_GET['s'] ) ? sanitize_text_field( $_GET['s'] ) : '';
 

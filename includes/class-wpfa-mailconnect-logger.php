@@ -24,6 +24,13 @@
 class Wpfa_Mailconnect_Logger {
 
 	/**
+     * Defines the allowed log status values for filtering and validation.
+     *
+     * @since 1.2.1
+     */
+    const ALLOWED_STATUSES = array( 'pending', 'success', 'failed' );
+	
+	/**
 	 * The name of the database table for email logs.
 	 *
 	 * @since    1.0.0
@@ -213,7 +220,7 @@ class Wpfa_Mailconnect_Logger {
 		$params     = array();
 
 		// Filter by status
-		if ( ! empty( $status ) && in_array( $status, array( 'success', 'failed', 'pending' ), true ) ) {
+		if ( ! empty( $status ) && in_array( $status, self::ALLOWED_STATUSES, true ) ) {
 			$where   .= ' AND status = %s';
 			$params[] = $status;
 		}
@@ -254,7 +261,7 @@ class Wpfa_Mailconnect_Logger {
 		$params     = array();
 
 		// Filter by status
-		if ( ! empty( $status ) && in_array( $status, array( 'success', 'failed', 'pending' ), true ) ) {
+		if ( ! empty( $status ) && in_array( $status, self::ALLOWED_STATUSES, true ) ) {
 			$where   .= ' AND status = %s';
 			$params[] = $status;
 		}
