@@ -239,7 +239,7 @@ class Wpfa_Mailconnect_SMTP {
 					$output[ $id ] = '0';
 				} else {
 					// Checkbox was submitted (must be '1'), sanitize its value
-					$output[ $id ] = $input[ $id ] == '1' ? '1' : '0';
+					$output[ $id ] = $input[ $id ] === '1' ? '1' : '0';
 				}
 			} else {
 				// Handle sanitization for other field types (optional but recommended)
