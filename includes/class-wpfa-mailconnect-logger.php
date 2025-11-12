@@ -127,6 +127,19 @@ class Wpfa_Mailconnect_Logger {
      * @param string $headers The email headers (JSON or string).
      * @return bool True on successful insertion, False if the query fails or if hash already exists.
      */
+	/**
+	 * Inserts a new log entry with status 'pending' if the hash does not already exist.
+	 * This method prevents deterministic duplicates at the database level.
+	 *
+	 * @since 1.2.0
+	 * @param string $hash The deterministic hash of the email content.
+	 * @param string $to The recipient email address(es) (CSV format).
+	 * @param string $subject The email subject.
+	 * @param string $message The email body (plain text).
+	 * @param string $body_html The email body (HTML).
+	 * @param string $headers The email headers (JSON or string).
+	 * @return bool True on successful insertion, False if the query fails or if hash already exists.
+	 */
 	public function insert_pending( $hash, $to, $subject, $message, $body_html, $headers = '' ) {
 		global $wpdb;
 		$table = $this->log_table_name;
@@ -135,21 +148,22 @@ class Wpfa_Mailconnect_Logger {
 		// Truncating to 1MB (1048576 bytes) as longtext handles up to 4GB, but we aim for safety.
 		$message   = substr( $message, 0, 1048576 );
 		$body_html = substr( $body_html, 0, 1048576 );
+		$headers   = substr( $headers, 0, 65535 ); // Truncate headers for text column
 
-		// Corrected list of columns: hash, to_email, subject, message, body_html, status, error_message, headers, created_at
+		// The SQL query is corrected here to include 'headers' in the column list
 		$result = $wpdb->query( $wpdb->prepare(
-			"INSERT INTO $table (hash, to_email, subject, message, body_html, status, error_message, created_at)
+			"INSERT INTO $table (hash, to_email, subject, message, body_html, status, error_message, headers, created_at)
 			  SELECT %s, %s, %s, %s, %s, 'pending', %s, %s, %s
 			WHERE NOT EXISTS (SELECT 1 FROM $table WHERE hash = %s)",
-			$hash,
-			$to,
-			$subject,
-			$message,
-			$body_html,
-			'', 		// Empty error message for pending status
-			$headers, // Using headers column temporarily to store headers metadata
-			current_time('mysql'),
-			$hash
+			$hash,            // %s: hash
+			$to,              // %s: to_email
+			$subject,         // %s: subject
+			$message,         // %s: message
+			$body_html,       // %s: body_html
+			'',               // %s: error_message (empty for pending)
+			$headers,         // %s: headers
+			current_time('mysql'), // %s: created_at
+			$hash             // %s: for WHERE NOT EXISTS clause
 		 ));
 
 		// $wpdb->query returns 1 for success, 0 for duplicate, false for error
