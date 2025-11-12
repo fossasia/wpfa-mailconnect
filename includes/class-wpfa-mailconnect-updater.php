@@ -7,7 +7,7 @@
  * and runs necessary update routines sequentially.
  *
  * @link       https://fossasia.org
- * @since      1.0.0
+ * @since      1.2.0
  *
  * @package    Wpfa_Mailconnect
  * @subpackage Wpfa_Mailconnect/includes
@@ -16,7 +16,7 @@
 /**
  * Wpfa_Mailconnect_Updater class.
  *
- * @since      1.0.0
+ * @since      1.2.0
  * @package    Wpfa_Mailconnect
  * @subpackage Wpfa_Mailconnect/includes
  * @author     FOSSASIA <info@fossasia.org>
@@ -26,7 +26,7 @@ class Wpfa_Mailconnect_Updater {
     /**
      * The database option key used to store the current schema version.
      *
-     * @since   1.0.0
+     * @since   1.2.0
      * @var string
      */
     const DB_VERSION_OPTION = 'wpfa_mailconnect_db_version';
@@ -34,7 +34,7 @@ class Wpfa_Mailconnect_Updater {
     /**
      * Retrieves the currently installed database version.
      *
-     * @since   1.0.0
+     * @since   1.2.0
      * @return string The installed DB version, or '0' if not set (pre-versioning install).
      */
     private function get_installed_db_version() {
@@ -44,7 +44,7 @@ class Wpfa_Mailconnect_Updater {
     /**
      * Updates the database version option to the latest expected version.
      *
-     * @since   1.0.0
+     * @since   1.2.0
      * @param string $version The version string to save.
      * @return bool
      */
@@ -57,7 +57,7 @@ class Wpfa_Mailconnect_Updater {
      *
      * Compares the installed version with the required version constant.
      *
-     * @since   1.0.0
+     * @since   1.2.0
      * @return void
      */
     public function check_for_updates() {
@@ -83,7 +83,7 @@ class Wpfa_Mailconnect_Updater {
      *
      * This method runs all necessary updates between the installed version and the expected version.
      *
-     * @since   1.0.0
+     * @since   1.2.0
      * @param string $installed_version The current version string.
      * @return void
      */
