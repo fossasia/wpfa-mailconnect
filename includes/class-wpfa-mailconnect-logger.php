@@ -115,19 +115,6 @@ class Wpfa_Mailconnect_Logger {
 	// --- New Logger API Methods for Status Lifecycle ---
 
 	/**
-     * Inserts a new log entry with status 'pending' if the hash does not already exist.
-     * This method prevents deterministic duplicates at the database level.
-     *
-     * @since 1.2.0
-     * @param string $hash The deterministic hash of the email content.
-     * @param string $to The recipient email address(es) (CSV format).
-	 * @param string $subject The email subject.
-     * @param string $message The email body (plain text).
-     * @param string $body_html The email body (HTML).
-     * @param string $headers The email headers (JSON or string).
-     * @return bool True on successful insertion, False if the query fails or if hash already exists.
-     */
-	/**
 	 * Inserts a new log entry with status 'pending' if the hash does not already exist.
 	 * This method prevents deterministic duplicates at the database level.
 	 *
