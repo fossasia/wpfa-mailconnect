@@ -172,7 +172,12 @@ class Wpfa_Mailconnect_Admin {
         <div class="wrap">
             <h1><?php esc_html_e( 'Email Logs', 'wpfa-mailconnect' ); ?></h1>
 
-            <?php if ( isset( $_GET['cleared'] ) && sanitize_text_field( $_GET['cleared'] ) === '1' ) : ?>
+            <?php 
+            // SECURE FIX: Check for the success transient instead of a URL parameter.
+            $logs_cleared = get_transient( 'wpfa_mailconnect_logs_cleared' );
+            if ( false !== $logs_cleared && 'success' === $logs_cleared ) : 
+                delete_transient( 'wpfa_mailconnect_logs_cleared' ); // Delete after displaying
+            ?>
                 <div class="notice notice-success">
                     <p><?php esc_html_e( 'Logs cleared successfully!', 'wpfa-mailconnect' ); ?></p>
                 </div>
@@ -304,11 +309,13 @@ class Wpfa_Mailconnect_Admin {
 		$logger = new Wpfa_Mailconnect_Logger();
 		$logger->clear_logs();
 
+		// SECURE FIX: Set a transient instead of using a URL parameter for success message display.
+        set_transient( 'wpfa_mailconnect_logs_cleared', 'success', MINUTE_IN_SECONDS );
+
 		wp_safe_redirect(
 			add_query_arg(
 				array(
 					'page'    => 'wpfa-mail-logs',
-					'cleared' => '1',
 				),
 				admin_url( 'options-general.php' )
 			)
