@@ -531,6 +531,8 @@ class Wpfa_Mailconnect_SMTP {
         // Reliably remove the action using the stored closure property.
         remove_action( 'wp_mail_failed', $this->error_capture_handler_closure );
 
+		$this->error_capture_handler_closure = null; // Clean up the reference to prevent memory leaks
+
         // If wp_mail failed and the handler didn't capture the error, check PHPMailer directly as a final fallback.
         if ( ! $success && empty( $error_message ) ) {
             global $phpmailer;
