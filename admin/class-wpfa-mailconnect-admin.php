@@ -152,8 +152,11 @@ class Wpfa_Mailconnect_Admin {
 
 		// Filtering parameters
 		$filter_status  = isset( $_GET['status'] ) ? sanitize_text_field( $_GET['status'] ) : '';
-        // SECURITY FIX: Explicitly validate 'status' against allowed values.
-        $filter_status = in_array( $filter_status, array( 'success', 'failed' ), true ) ? $filter_status : '';
+		
+		// UPDATE: Explicitly validate 'status' against allowed values including 'pending'.
+		$allowed_statuses = array( 'pending', 'success', 'failed' );
+		$filter_status = in_array( $filter_status, $allowed_statuses, true ) ? $filter_status : '';
+
 		$filter_search  = isset( $_GET['s'] ) ? sanitize_text_field( $_GET['s'] ) : '';
 
         // Get paginated and filtered logs and total count
@@ -199,6 +202,8 @@ class Wpfa_Mailconnect_Admin {
                 <label for="status-filter" class="screen-reader-text"><?php esc_html_e( 'Filter by Status', 'wpfa-mailconnect' ); ?></label>
                 <select name="status" id="status-filter">
                     <option value=""><?php esc_html_e( 'All Statuses', 'wpfa-mailconnect' ); ?></option>
+					<!-- UPDATE: Add 'pending' status option -->
+					<option value="pending" <?php selected( $filter_status, 'pending' ); ?>><?php esc_html_e( 'Pending', 'wpfa-mailconnect' ); ?></option>
                     <option value="success" <?php selected( $filter_status, 'success' ); ?>><?php esc_html_e( 'Success', 'wpfa-mailconnect' ); ?></option>
                     <option value="failed" <?php selected( $filter_status, 'failed' ); ?>><?php esc_html_e( 'Failed', 'wpfa-mailconnect' ); ?></option>
                 </select>
@@ -224,7 +229,16 @@ class Wpfa_Mailconnect_Admin {
 					</thead>
 					<tbody>
 						<?php foreach ( $logs as $log ) : ?>
-						<tr class="<?php echo 'failed' === $log->status ? 'log-failed' : 'log-success'; ?>">
+						<tr class="<?php 
+                            // UPDATE: Determine class based on status, including 'pending'
+                            $row_class = 'log-success';
+                            if ( 'failed' === $log->status ) {
+                                $row_class = 'log-failed';
+                            } elseif ( 'pending' === $log->status ) {
+                                $row_class = 'log-pending';
+                            }
+                            echo esc_attr( $row_class ); 
+                        ?>">
 							<td><?php echo esc_html( $log->created_at ); ?></td>
 							<td><?php echo esc_html( $log->to_email ); ?></td>
 							<td><?php echo esc_html( $log->subject ); ?></td>

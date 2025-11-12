@@ -67,6 +67,16 @@ class Wpfa_Mailconnect {
     protected $smtp;
 
 	/**
+     * Database Updater instance.
+     *
+     * @since    1.0.0
+     * @access   protected
+     * @var      Wpfa_Mailconnect_Updater    $updater   Handles database migrations.
+     */
+	protected $updater;
+
+
+	/**
 	 * Define the core functionality of the plugin.
 	 *
 	 * Set the plugin name and the plugin version that can be used throughout the plugin.
@@ -79,8 +89,8 @@ class Wpfa_Mailconnect {
 		if ( defined( 'WPFA_MAILCONNECT_VERSION' ) ) {
 			$this->version = WPFA_MAILCONNECT_VERSION;
 		} else {
-			// Updated to 1.1.0 to reflect logging and cleanup features.
-			$this->version = '1.1.0';
+			// Updated to 1.2.0 to reflect advanced logging columns and features.
+			$this->version = '1.2.0';
 		}
 		$this->plugin_name = 'wpfa-mailconnect';
 
@@ -137,6 +147,11 @@ class Wpfa_Mailconnect {
 		 * The class responsible for handling all database logging.
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-wpfa-mailconnect-logger.php';
+        
+        /**
+         * The class responsible for database schema versioning and migration.
+         */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-wpfa-mailconnect-updater.php';
 
 		/**
 		 * The class responsible for SMTP settings and functionality
@@ -187,8 +202,9 @@ class Wpfa_Mailconnect {
 		$this->loader->add_action( 'phpmailer_init', $this->smtp, 'phpmailer_override' );
 
 		// Add email logging hooks
-		$this->loader->add_filter( 'wp_mail', $this->smtp, 'log_email_on_send', 10, 1 );
+		$this->loader->add_filter( 'wp_mail', $this->smtp, 'log_email_on_send', 1, 1 );
 		$this->loader->add_action( 'wp_mail_failed', $this->smtp, 'log_email_failure', 10, 1 );
+		$this->loader->add_filter( 'wp_mail', $this->smtp, 'track_email_result', 999, 1 );
 
 		// Register the scheduled action for log cleanup
 		$this->loader->add_action( 'wpfa_mailconnect_cleanup_logs', $this->smtp, 'do_log_cleanup' );

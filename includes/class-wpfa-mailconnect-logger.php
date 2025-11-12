@@ -8,7 +8,7 @@
  *
  * @link       https://fossasia.org
  * @since      1.0.0
- *
+ * @version    1.2.0 (Updated for full HTML content and detailed status logging)
  * @package    Wpfa_Mailconnect
  * @subpackage Wpfa_Mailconnect/includes
  */
@@ -55,63 +55,127 @@ class Wpfa_Mailconnect_Logger {
 		$table_name      = $wpdb->prefix . 'wpfa_mail_logs';
 		$charset_collate = $wpdb->get_charset_collate();
 
-		// Use dbDelta to safely create or update the table schema.
+		// Check if table already exists
+		$table_exists = $wpdb->get_var( "SHOW TABLES LIKE '$table_name'" ) === $table_name;
+
+		// If table exists, only add missing columns instead of running full dbDelta
+		if ( $table_exists ) {
+			// Check and add body_html column if it doesn't exist
+			$column_exists = $wpdb->get_results( "SHOW COLUMNS FROM $table_name LIKE 'body_html'" );
+			if ( empty( $column_exists ) ) {
+				$wpdb->query( "ALTER TABLE $table_name ADD COLUMN body_html longtext AFTER message" );
+			}
+
+			// Check and add status_details column if it doesn't exist
+			$column_exists = $wpdb->get_results( "SHOW COLUMNS FROM $table_name LIKE 'status_details'" );
+			if ( empty( $column_exists ) ) {
+				$wpdb->query( "ALTER TABLE $table_name ADD COLUMN status_details text AFTER error_message" );
+			}
+
+			return; // Exit early to avoid dbDelta issues
+		}
+
 		// NOTE: The DB version is included as a comment for dbDelta to track schema changes.
 		$sql = "CREATE TABLE $table_name (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			hash varchar(64) NOT NULL,
 			to_email varchar(255) NOT NULL,
 			subject varchar(255) NOT NULL,
 			message longtext,
+			body_html longtext,
 			status varchar(20) NOT NULL,
 			error_message text,
+			status_details text,
 			created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
 			PRIMARY KEY (id),
+			UNIQUE KEY uniq_hash (hash),
 			KEY status (status),
-            KEY created_at (created_at),
-            /* The prefix length of 191 is used for utf8mb4 compatibility with older MySQL versions (767 bytes index limit) */
-            KEY to_email (to_email(191))
+			KEY created_at (created_at),
+			KEY to_email (to_email(191))
 		) $charset_collate;";
-		
-		// Concatenate the DB version comment, ensuring the constant is evaluated by PHP
-		$sql .= " /* db_version " . WPFA_MAILCONNECT_DB_VERSION . " */";
+
+        /* The prefix length of 191 is used for utf8mb4 compatibility with older MySQL versions (767 bytes index limit) */
+		// We must define the DB version constant in the plugin's main file (wpfa-mailconnect.php)
+		// For now, we assume it's set to 1.2.0 in the main plugin file.
+		$db_version = defined( 'WPFA_MAILCONNECT_DB_VERSION' ) ? WPFA_MAILCONNECT_DB_VERSION : '1.2.0';
+		$sql .= " /* db_version " . $db_version . " */";
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( $sql );
 	}
 
+	// --- New Logger API Methods for Status Lifecycle ---
+
 	/**
-	 * Logs an email attempt to the database.
-	 *
-	 * @since 1.0.0
-	 * @param string $to_email The recipient email address(es).
+     * Inserts a new log entry with status 'pending' if the hash does not already exist.
+     * This method prevents deterministic duplicates at the database level.
+     *
+     * @since 1.2.0
+     * @param string $hash The deterministic hash of the email content.
+     * @param string $to The recipient email address(es) (CSV format).
 	 * @param string $subject The email subject.
-	 * @param string $message The email body.
-	 * @param string $status The result status ('success' or 'failed').
-	 * @param string $error_message Any associated error message, if failed.
-	 * @return bool True on success, false on failure.
-	 */
-	public function log_email( $to_email, $subject, $message, $status, $error_message = '' ) {
+     * @param string $message The email body (plain text).
+     * @param string $body_html The email body (HTML).
+     * @param string $headers The email headers (JSON or string).
+     * @return bool True on successful insertion, False if the query fails or if hash already exists.
+     */
+	public function insert_pending( $hash, $to, $subject, $message, $body_html, $headers = '' ) {
 		global $wpdb;
+		$table = $this->log_table_name;
 
-		// Clean up message before logging to prevent excessive size, keeping first 10KB.
-		$message = substr( $message, 0, 10240 );
+		// Clean up message and body_html before logging to prevent excessive size.
+		// Truncating to 1MB (1048576 bytes) as longtext handles up to 4GB, but we aim for safety.
+		$message   = substr( $message, 0, 1048576 );
+		$body_html = substr( $body_html, 0, 1048576 );
 
-		return $wpdb->insert(
-			$this->log_table_name,
-			array(
-				'to_email'      => $to_email,
-				'subject'       => $subject,
-				'message'       => $message,
-				'status'        => $status,
-				'error_message' => $error_message,
+		// We now have 6 fields for insertion, plus two fields used for temporary metadata (headers and body_html).
+		$result = $wpdb->query( $wpdb->prepare(
+			"INSERT INTO $table (hash, to_email, subject, message, body_html, status, error_message, created_at)
+			  SELECT %s, %s, %s, %s, %s, 'pending', %s, %s
+			WHERE NOT EXISTS (SELECT 1 FROM $table WHERE hash = %s)",
+			$hash,
+			$to,
+			$subject,
+			$message,
+			$body_html,
+			$headers, // Using error_message column temporarily to store headers metadata
+			current_time('mysql'),
+			$hash
+		 ));
+
+		// $wpdb->query returns 1 for success, 0 for duplicate, false for error
+		return $result !== false;
+	}
+
+	/**
+     * Updates the status, error message, and detailed status/ID for a log entry identified by its hash.
+     *
+     * @since 1.2.0
+     * @param string $hash The deterministic hash of the email content.
+	 * @param string $status The result status ('success' or 'failed').
+     * @param string $error The high-level error message (used for display).
+     * @param string $status_details Detailed, technical status or tracking ID (used for debugging).
+     * @return int|false The number of rows updated (0 or 1), or false on error.
+     */
+	public function update_status( $hash, $status, $error = '', $status_details = '' ) {
+		global $wpdb;
+		$table = $this->log_table_name;
+
+		// Ensure messages don't exceed column size limits.
+		$error 			= substr( $error, 0, 65535 ); 
+		$status_details = substr( $status_details, 0, 65535 );
+
+		// Update the existing row based on the unique hash.
+		return $wpdb->update(
+			$table,
+			array( 
+				'status' 		=> $status, 
+				'error_message' => $error,
+				'status_details' => $status_details 
 			),
-			array(
-				'%s', // to_email
-				'%s', // subject
-				'%s', // message
-				'%s', // status
-				'%s', // error_message
-			)
+			array( 'hash' => $hash ),
+			array( '%s', '%s', '%s' ),
+			array( '%s' )
 		);
 	}
 
@@ -139,7 +203,7 @@ class Wpfa_Mailconnect_Logger {
 		$params     = array();
 
 		// Filter by status
-		if ( ! empty( $status ) && in_array( $status, array( 'success', 'failed' ), true ) ) {
+		if ( ! empty( $status ) && in_array( $status, array( 'success', 'failed', 'pending' ), true ) ) {
 			$where   .= ' AND status = %s';
 			$params[] = $status;
 		}
@@ -151,7 +215,8 @@ class Wpfa_Mailconnect_Logger {
 		}
 
         // Build the WHERE clause portion
-        $sql = "SELECT * FROM $table_name $where ORDER BY created_at DESC";
+		// NOTE: We include all fields here, including the new ones (body_html, status_details)
+		$sql = "SELECT id, hash, to_email, subject, message, body_html, status, error_message, status_details, created_at FROM $table_name $where ORDER BY created_at DESC";
 
         // Prepare WHERE clause if there are filter parameters
         if ( ! empty( $params ) ) {
@@ -179,7 +244,7 @@ class Wpfa_Mailconnect_Logger {
 		$params     = array();
 
 		// Filter by status
-		if ( ! empty( $status ) && in_array( $status, array( 'success', 'failed' ), true ) ) {
+		if ( ! empty( $status ) && in_array( $status, array( 'success', 'failed', 'pending' ), true ) ) {
 			$where   .= ' AND status = %s';
 			$params[] = $status;
 		}

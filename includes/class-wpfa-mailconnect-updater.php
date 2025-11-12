@@ -91,7 +91,8 @@ class Wpfa_Mailconnect_Updater {
         // Define all migration methods in version order.
         $migration_methods = array(
             '1.0.1' => 'update_to_1_0_1',
-            // Add future migrations here: '1.0.2' => 'update_to_1_0_2',
+        // Migration for 1.2.0: Adds 'body_html' and 'status_details' columns.
+            '1.2.0' => 'update_to_1_2_0', 
         );
 
         foreach ( $migration_methods as $version => $method ) {
@@ -117,6 +118,29 @@ class Wpfa_Mailconnect_Updater {
     }
 
     /* --- Individual Migration Methods --- */
+    
+    /**
+     * Migration function for version 1.2.0: Adds 'body_html' and 'status_details' columns.
+     *
+     * @since 1.2.0
+     * @return void
+     */
+    private function update_to_1_2_0() {
+        // Since create_log_table uses dbDelta, calling it again with the
+        // updated schema from Wpfa_Mailconnect_Logger will automatically
+        // add the new columns (body_html and status_details).
+
+        // Ensure logger class is available
+        require_once plugin_dir_path( __FILE__ ) . 'class-wpfa-mailconnect-logger.php';
+        
+        // Run the table creation/check routine to apply the schema update
+        Wpfa_Mailconnect_Logger::create_log_table();
+        
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            error_log( 'WPFA MailConnect Database migrated to 1.2.0 (added body_html and status_details).' );
+        }
+    }
+
 
     /**
      * Example migration function for version 1.0.1.

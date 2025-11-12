@@ -32,15 +32,15 @@ if ( ! defined( 'WPINC' ) ) {
 
 /**
  * Currently plugin version.
- * Updated to version 1.1.0 to add log retention features.
+ * Updated to version 1.2.0 to include deterministic logging and status lifecycle.
  */
-define( 'WPFA_MAILCONNECT_VERSION', '1.1.0' );
+define( 'WPFA_MAILCONNECT_VERSION', '1.2.0' );
 
 /**
  * Defines the required database schema version.
- * Updated to 1.1.0 to trigger dbDelta for log table indexes.
+* Updated to 1.2.0 to trigger dbDelta for the new 'hash' column and UNIQUE index.
  */
-define( 'WPFA_MAILCONNECT_DB_VERSION', '1.1.0' );
+define( 'WPFA_MAILCONNECT_DB_VERSION', '1.2.0' );
 
 /**
  * The code that runs during plugin activation.

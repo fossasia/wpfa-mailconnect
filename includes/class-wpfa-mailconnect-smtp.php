@@ -8,7 +8,7 @@
  *
  * @author Ubayed Bin Sufian
  * @since 1.0.0
- * @version 1.1.0
+ * @version 1.2.0 (Updated to use deterministic hash for logging)
  */
 class Wpfa_Mailconnect_SMTP {
 
@@ -18,6 +18,15 @@ class Wpfa_Mailconnect_SMTP {
 	 * @since 1.1.0
 	 */
 	const CLEANUP_CRON_HOOK = 'wpfa_mailconnect_cleanup_logs';
+
+    /**
+     * Action hook fired after wp_mail successfully sends.
+     *
+     * This is used to update the log status from 'pending' to 'success'.
+     *
+     * @since 1.2.0
+     */
+    const MAIL_SENT_SUCCESS_HOOK = 'wpfa_mailconnect_mail_sent';
 
     /**
      * Plugin id and version from main class
@@ -36,9 +45,29 @@ class Wpfa_Mailconnect_SMTP {
     private $logger;    
 
     /**
-     * Track logged emails to prevent duplicates (when using the 'wp_mail' filter)
+     * Stores the hash of the currently processing email to link success/failure status updates.
+     * * @since 1.2.0
+     * @access private
+     * @var string $current_mail_hash
      */
-    private static $logged_emails = array();
+    private $current_mail_hash = '';
+
+	/**
+	 * Stores the current email attributes for success tracking.
+	 *
+	 * @since 1.2.0
+	 * @var array $current_mail_atts
+	 */
+	private $current_mail_atts = array();
+    
+    /**
+     * Track logged email hashes for successful sends within a single request.
+     * Used for the success hook only.
+     *
+     * @since 1.2.0
+     * @var array $logged_hashes
+     */
+    private static $logged_hashes = array();
 
     /**
      * Stores the error capture handler closure for later removal.
@@ -75,6 +104,9 @@ class Wpfa_Mailconnect_SMTP {
 
 		// Assuming Wpfa_Mailconnect_Logger class is autoloaded or required elsewhere.
         $this->logger = new Wpfa_Mailconnect_Logger();
+        
+        // Store mail atts for success tracking
+		add_filter( 'wp_mail', array( $this, 'track_email_result' ), 999, 1 );
     }
 
     /* --- Admin menu / settings registration --- */
@@ -453,6 +485,27 @@ class Wpfa_Mailconnect_SMTP {
 		);
         $headers = array( 'Content-Type: text/html; charset=UTF-8' );
 
+        // --- NEW LOGGING: INSERT PENDING ---
+        $args = array(
+            'to'      => $recipient,
+            'subject' => $subject,
+            'message' => $body,
+            'headers' => $headers,
+        );
+        $hash = $this->get_normalized_hash( $args );
+        
+        // Log as 'pending' using the new API.
+        // The recipient should be logged as a string for simplicity in test context.
+        $this->logger->insert_pending(
+            $hash,
+            $recipient,
+            $subject,
+            $body,
+            wp_json_encode( $headers )
+        );
+        
+        // --- END NEW LOGGING: INSERT PENDING ---
+
 		// Capture PHPMailer errors by registering a temporary handler.
 		$error_message = '';
 		
@@ -486,15 +539,16 @@ class Wpfa_Mailconnect_SMTP {
             }
         }
 
-		// Log the test email attempt. This intentionally bypasses the enable_log check since it's an admin test.
-        $this->logger->log_email(
-            $recipient,
-            $subject,
-            $body,
-            $success ? 'success' : 'failed',
-            $error_message
-        );
-
+		// --- NEW LOGGING: UPDATE STATUS ---
+        if ( $success ) {
+            // Update log entry from 'pending' to 'success'.
+            $this->logger->update_status( $hash, 'success', '' );
+        } else {
+            // Update log entry from 'pending' to 'failed'.
+            $this->logger->update_status( $hash, 'failed', $error_message );
+        }
+        // --- END NEW LOGGING: UPDATE STATUS ---
+        
 		if ( $success ) {
 			$message = sprintf(
 				/* translators: %s: Recipient email address */
@@ -567,107 +621,177 @@ class Wpfa_Mailconnect_SMTP {
         // Disable debug output
         $phpmailer->SMTPDebug = 0;
     }
+    
+    /**
+     * Calculates a deterministic hash for an email based on its core components.
+     *
+     * This hash is used for de-duplication and linking the 'pending' log entry 
+     * to the 'success'/'failed' update.
+     *
+     * @since 1.2.0
+     * @param array $args Arguments passed to wp_mail (to, subject, message, headers, attachments).
+     * @return string The MD5 hash string.
+     */
+    private function get_normalized_hash( $args ) {
+        $to_raw      = isset( $args['to'] ) ? $args['to'] : '';
+        $subject_raw = isset( $args['subject'] ) ? $args['subject'] : '';
+        $message_raw = isset( $args['message'] ) ? $args['message'] : '';
+        $headers_raw = isset( $args['headers'] ) ? $args['headers'] : '';
+        
+        // Normalize 'to' field: ensure array, convert to lowercase, remove duplicates, sort.
+        $to_array = is_array( $to_raw ) ? $to_raw : array( (string) $to_raw );
+        $to_array = array_values( array_unique( array_map( 'strtolower', $to_array ) ) );
+        sort( $to_array );
+
+        $normalized_data = array(
+            'to'      => $to_array,
+            'subject' => trim( strtolower( (string) $subject_raw ) ),
+            'message' => trim( (string) $message_raw ),
+            'headers' => $headers_raw, // Keep raw headers for completeness in hash
+        );
+
+        // Use wp_json_encode for a consistent string representation of the array
+        return md5( wp_json_encode( $normalized_data ) );
+    }
 
 	/* --- Email Logging Hooks --- */
 
 	/**
 	 * Log email using wp_mail filter before it attempts to send.
-	 * Logged as 'success' here, corrected to 'failed' if wp_mail_failed fires later.
+	 * Inserts a log entry with status 'pending' and stores the hash for later update.
 	 *
 	 * @param array $args Arguments passed to wp_mail (to, subject, message, headers, attachments).
 	 * @return array The original arguments, unchanged.
 	 */
 	public function log_email_on_send( $args ) {
 		$options = get_option( 'smtp_options', array() );
-		$enabled = isset( $options['enable_log'] ) ? (bool) $options['enable_log'] : true; // Default to enabled
+		$enabled = isset( $options['enable_log'] ) ? (bool) $options['enable_log'] : false; // Default to disabled for safety
 
 		// Early exit if logging is disabled
 		if ( ! $enabled ) {
 			return $args;
 		}
 
-		// Extract email data from args
 		$to      = isset( $args['to'] ) ? $args['to'] : '';
 		$subject = isset( $args['subject'] ) ? $args['subject'] : 'No Subject';
 		$message = isset( $args['message'] ) ? $args['message'] : '';
+		$headers = isset( $args['headers'] ) ? $args['headers'] : '';
 		
-		// Handle 'to' field - can be string or array
-		$to_string = '';
-		if ( is_array( $to ) ) {
-			$to_string = implode( ', ', $to );
-		} else {
-			$to_string = $to;
-		}
+        // Generate deterministic hash
+		$hash = $this->get_normalized_hash( $args );
+        
+        // Store the hash in the instance property for access in the success/failure hooks
+        $this->current_mail_hash = $hash;
+        
+		// Handle 'to' field (convert array to comma-separated string for logging)
+		$to_string = is_array( $to ) ? implode( ', ', $to ) : $to;
+        
+        // Handle 'headers' field (convert array to JSON string)
+        $headers_json = is_array( $headers ) ? wp_json_encode( $headers ) : $headers;
 		
-		// Create hash to prevent duplicate logging (based on recipient and subject)
-		$hash = md5( $to_string . $subject );
-		
-		// Only log if we haven't logged this exact email recently
-		if ( ! isset( self::$logged_emails[$hash] ) ) {
-			self::$logged_emails[ $hash ] = time(); // Store time to potentially implement time-based cleanup
-			
-			// Log with 'success' status (assumed to succeed until failure hook runs)
-			$this->logger->log_email(
-				$to_string,
-				$subject,
-				$message,
-				'success',
-				''
-			);
-			
-			// Clean up old hashes (keep only the 20 most recent hashes to prevent memory bloat)
-			if ( count( self::$logged_emails ) > 20 ) {
-				// Only keep the most recent 20 (sorted by key as keys are md5 hashes, or sort by time if implemented)
-				// Given keys are hashes, simply use array_slice on the end for simplicity in this pattern.
-				self::$logged_emails = array_slice( self::$logged_emails, -20, 20, true );
-			}
-		}
-		
+		// Insert log entry with 'pending' status.
+		// insert_pending handles the unique hash check (de-duplication) at the DB level.
+		$is_newly_logged = $this->logger->insert_pending(
+			$hash,
+			$to_string,
+			$subject,
+			$message,
+			$headers_json
+		);
+        
+        // Store the hash if it was a new entry, for the success hook.
+        if ( $is_newly_logged ) {
+            self::$logged_hashes[ $hash ] = time();
+        }
+
 		// MUST return the args unchanged for wp_mail to work
 		return $args;
 	}
 
 	/**
+	 * Wrapper to track email success via return value check.
+	 * 
+	 * @param bool $result The result of wp_mail.
+	 * @param array $args The original wp_mail arguments.
+	 * @return bool
+	 */
+	public function track_email_result( $atts ) {
+		// Store atts for potential success logging
+		$this->current_mail_atts = $atts;
+		return $atts;
+	}
+
+    /**
+	 * Updates the log entry status to 'success'.
+     *
+     * This is called via a custom action added to the 'wp_mail' function 
+     * immediately after it returns true.
+	 *
+     * @since 1.2.0
+	 * @param array $args Arguments originally passed to wp_mail.
+	 * @return void
+	 */
+    public function log_email_success( $args ) {
+        $hash = $this->get_normalized_hash( $args );
+
+        // Only proceed if this hash was recorded as 'pending' in the current request
+        if ( isset( self::$logged_hashes[ $hash ] ) ) {
+            // Update the status using the hash
+            $this->logger->update_status( $hash, 'success', '' );
+
+            // Clean up the hash to prevent accidental re-update
+            unset( self::$logged_hashes[ $hash ] );
+        }
+    }
+
+	/**
 	 * Log failed emails.
 	 *
-	 * This hook fires after wp_mail fails and attempts to update the log status.
+	 * This hook fires after wp_mail fails and attempts to update the log status to 'failed'.
 	 *
 	 * @param WP_Error $wp_error The error object returned by wp_mail().
 	 * @return void
 	 */
 	public function log_email_failure( $wp_error ) {
 		$options = get_option( 'smtp_options', array() );
-		$enabled = isset( $options['enable_log'] ) ? (bool) $options['enable_log'] : true; // Default to enabled
+		$enabled = isset( $options['enable_log'] ) ? (bool) $options['enable_log'] : false;
 
 		// Early exit if logging is disabled
 		if ( ! $enabled ) {
 			return;
 		}
 
-        $error_data = $wp_error->get_error_data();
-
-		$to      = 'Unknown';
-		$subject = 'Unknown';
-		$message = '';
-		
-		if ( is_array( $error_data ) ) {
-			if ( isset( $error_data['to'] ) ) {
-				$to = is_array( $error_data['to'] ) ? implode( ', ', $error_data['to'] ) : $error_data['to'];
+		// Use stored atts from the filter or fall back to error data
+		if ( ! empty( $this->current_mail_atts ) ) {
+			$hash = $this->get_normalized_hash( $this->current_mail_atts );
+		} else {
+			$error_data = $wp_error->get_error_data();
+			$hash = $this->current_mail_hash;
+			
+			if ( empty( $hash ) && is_array( $error_data ) ) {
+				// Attempt to derive the hash from error data if it was somehow lost
+				$args = array(
+					'to'      => isset( $error_data['to'] ) ? $error_data['to'] : '',
+					'subject' => isset( $error_data['subject'] ) ? $error_data['subject'] : '',
+					'message' => isset( $error_data['message'] ) ? $error_data['message'] : '',
+					'headers' => isset( $error_data['headers'] ) ? $error_data['headers'] : '',
+				);
+				$hash = $this->get_normalized_hash( $args );
 			}
-			$subject = isset( $error_data['subject'] ) ? $error_data['subject'] : 'Unknown';
-			$message = isset( $error_data['message'] ) ? $error_data['message'] : '';
 		}
-		
-		// The original log entry created by log_email_on_send needs to be found and updated.
-		// Since the Logger class is responsible for this logic, we call log_email with the failure status.
-		// It is assumed the Logger implementation will find the most recent matching 'success' log entry
-		// based on recipient/subject and update its status to 'failed' with the error message.
-		$this->logger->log_email(
-			$to,
-			$subject,
-			$message,
-			'failed',
-			$wp_error->get_error_message()
-		);
+
+        // Only proceed if we have a hash
+        if ( ! empty( $hash ) ) {
+            
+            // Clean up the hash from the success tracker to ensure only one status update occurs
+            unset( self::$logged_hashes[ $hash ] );
+
+            // Update the existing 'pending' log entry to 'failed'.
+            $this->logger->update_status(
+                $hash,
+                'failed',
+                $wp_error->get_error_message()
+            );
+        }
 	}
 }
