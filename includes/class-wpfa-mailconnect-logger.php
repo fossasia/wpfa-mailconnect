@@ -154,7 +154,7 @@ class Wpfa_Mailconnect_Logger {
 		 ));
 
 		// $wpdb->query returns 1 for success, 0 for duplicate, false for error
-		return $result !== false;
+		return $result === 1;
 	}
 
 	/**
