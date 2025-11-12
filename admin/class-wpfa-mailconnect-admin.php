@@ -284,7 +284,7 @@ class Wpfa_Mailconnect_Admin {
                 echo '</div>';
                 ?>
             <?php else : ?>
-                <p><?php esc_html_e( 'No email logs found.', 'wpfa-mailconnect' ); ?></p>
+                <p><?php esc_html_e( 'No email logs found', 'wpfa-mailconnect' ); ?>.</p>
             <?php endif; ?>
         </div>
 		<?php
