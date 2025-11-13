@@ -501,6 +501,7 @@ class Wpfa_Mailconnect_SMTP {
             $recipient,
             $subject,
             $body,
+			$body,
             wp_json_encode( $headers )
         );
         
@@ -697,6 +698,7 @@ class Wpfa_Mailconnect_SMTP {
 			$hash,
 			$to_string,
 			$subject,
+			$message,
 			$message,
 			$headers_json
 		);
