@@ -294,7 +294,7 @@ class Wpfa_Mailconnect_Logger {
 	public function clear_logs() {
 		global $wpdb;
 		$table_name = esc_sql( $this->log_table_name );
-		return (bool) $wpdb->query( "TRUNCATE TABLE {$table_name}" );
+		return (bool) $wpdb->query( "TRUNCATE TABLE `{$this->log_table_name}`" );
 	}
 
 	/**
