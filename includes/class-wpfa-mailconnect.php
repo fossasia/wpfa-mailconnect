@@ -160,7 +160,7 @@ class Wpfa_Mailconnect {
 		 * The class responsible for consolidated email logging service.
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-wpfa-mailconnect-email-logger-service.php';
-        
+	
         /**
          * The class responsible for database schema versioning and migration.
          */
