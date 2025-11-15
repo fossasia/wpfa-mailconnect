@@ -75,6 +75,14 @@ class Wpfa_Mailconnect {
      */
 	protected $updater;
 
+	/**
+	 * Email Logger Service instance.
+	 *
+	 * @since    1.2.1
+	 * @access   protected
+	 * @var      Wpfa_Mailconnect_Email_Logger_Service    $email_logger_service    Handles consolidated email logging.
+	 */
+	protected $email_logger_service;
 
 	/**
 	 * Define the core functionality of the plugin.
@@ -147,6 +155,11 @@ class Wpfa_Mailconnect {
 		 * The class responsible for handling all database logging.
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-wpfa-mailconnect-logger.php';
+
+		/**
+		 * The class responsible for consolidated email logging service.
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-wpfa-mailconnect-email-logger-service.php';
         
         /**
          * The class responsible for database schema versioning and migration.
@@ -201,17 +214,10 @@ class Wpfa_Mailconnect {
 		$this->loader->add_action( 'admin_post_smtp_send_test', $this->smtp, 'handle_test_email' );
 		$this->loader->add_action( 'phpmailer_init', $this->smtp, 'phpmailer_override' );
 
-		// Add email logging hooks
-		$this->loader->add_filter( 'wp_mail', $this->smtp, 'log_email_on_send', 10, 5 );
-
-		// Track email result (needs 5 args and a high priority to run late)
-		$this->loader->add_filter( 'wp_mail', $this->smtp, 'track_email_result', 999, 5 );
-
-		// Action hook for logging success (fired by track_email_result)
-		$this->loader->add_action( 'wpfa_mailconnect_mail_sent', $this->smtp, 'log_email_success', 10, 1 );
-
-		// Action hook for logging failure
-		$this->loader->add_action( 'wp_mail_failed', $this->smtp, 'log_email_failure', 10, 1 );
+		// Initialize and register the consolidated email logging service (v1.2.1)
+		// This replaces the old scattered logging hooks for better maintainability
+		$this->email_logger_service = new Wpfa_Mailconnect_Email_Logger_Service();
+		$this->email_logger_service->register_hooks();
 
 		// Register the scheduled action for log cleanup
 		$this->loader->add_action( 'wpfa_mailconnect_cleanup_logs', $this->smtp, 'do_log_cleanup' );
