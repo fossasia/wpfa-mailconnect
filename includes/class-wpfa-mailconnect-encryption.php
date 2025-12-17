@@ -210,6 +210,81 @@ class Wpfa_Mailconnect_Encryption {
 	}
 
 	/**
+	 * Checks if a value appears to be legacy CBC-encrypted.
+	 *
+	 * Legacy format: base64_iv:base64_ciphertext
+	 *
+	 * @since  				1.2.4
+	 * @param  string $data The value to check.
+	 * @return bool         True if appears to be legacy format.
+	 */
+	public static function is_legacy_encrypted( $data ) {
+		if ( empty( $data ) || ! is_string( $data ) ) {
+			return false;
+		}
+		
+		// Must NOT be new format
+		if ( self::is_encrypted( $data ) ) {
+			return false;
+		}
+		
+		// Must contain exactly one colon separator
+		if ( substr_count( $data, ':' ) !== 1 ) {
+			return false;
+		}
+		
+		// Both parts must look like base64
+		$parts = explode( ':', $data, 2 );
+		if ( count( $parts ) !== 2 ) {
+			return false;
+		}
+		
+		// Validate base64 format: alphanumeric + / + = (padding)
+		$base64_pattern = '/^[A-Za-z0-9+\/]+=*$/';
+		return preg_match( $base64_pattern, $parts[0] ) && preg_match( $base64_pattern, $parts[1] );
+	}
+
+	/**
+	 * Decrypts data using the legacy AES-256-CBC method.
+	 *
+	 * Used as a fallback migration path for credentials encrypted 
+	 * with versions prior to 1.2.3.
+	 *
+	 * @since  1.2.4
+	 * @param  string $data The encrypted string.
+	 * @return string The decrypted string, or the original string on failure.
+	 */
+	public static function decrypt_legacy( $data ) {
+		// Use the new validation method
+		if ( ! self::is_legacy_encrypted( $data ) ) {
+			return $data;
+		}
+		
+		$parts = explode( ':', $data, 2 );
+		// explode() guaranteed to return 2 elements due to is_legacy_encrypted() check
+		
+		$iv            = base64_decode( $parts[0], true ); // strict mode
+		$encrypted_raw = base64_decode( $parts[1], true );
+		
+		// Validate base64 decoding succeeded
+		if ( false === $iv || false === $encrypted_raw ) {
+			error_log( 'WPFA MailConnect: Legacy format base64 decode failed.' );
+			return $data;
+		}
+		
+		$key = self::get_encryption_key();
+
+		$decrypted = openssl_decrypt( $encrypted_raw, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv );
+
+		if ( false === $decrypted ) {
+			error_log( 'WPFA MailConnect: Legacy decryption failed.' );
+			return $data;
+		}
+		
+		return $decrypted;
+	}
+
+	/**
 	 * Checks if a value is encrypted.
 	 *
 	 * @since  1.2.2

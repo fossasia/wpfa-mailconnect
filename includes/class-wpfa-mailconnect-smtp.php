@@ -561,22 +561,55 @@ class Wpfa_Mailconnect_SMTP {
 		if ( isset( $options['smtp_pass'] ) ) {
 			$raw_pass	= $options['smtp_pass'];
 			$decrypted	= Wpfa_Mailconnect_Encryption::decrypt( $raw_pass );
-			
-			// If the value is encrypted and decrypt() returns it unchanged, treat as decryption failure.
-			// This check relies on Wpfa_Mailconnect_Encryption::is_encrypted() method being available.
-			if ( method_exists( 'Wpfa_Mailconnect_Encryption', 'is_encrypted' )
-				&& Wpfa_Mailconnect_Encryption::is_encrypted( $raw_pass )
-				&& $decrypted === $raw_pass
-			) {
-				$pass = '';
-				// Log a clear error so admins know credentials cannot be decrypted.
-				if ( function_exists( 'error_log' ) ) {
-					error_log( '[WPFA Mailconnect] SMTP password decryption failed. The stored credentials could not be decrypted. Please re-save SMTP settings.' );
-				}
-			} else {
+
+			// 1) Normal path: current decrypt() succeeded.
+			if ( '' !== $decrypted && $decrypted !== $raw_pass ) {
 				$pass = $decrypted;
+			} else {
+				$legacy_decrypted = '';
+
+				// 2) Migration path: attempt legacy decryption when available.
+				if (
+					method_exists( 'Wpfa_Mailconnect_Encryption', 'decrypt_legacy' )
+					&& method_exists( 'Wpfa_Mailconnect_Encryption', 'is_legacy_encrypted' )
+					&& Wpfa_Mailconnect_Encryption::is_legacy_encrypted( $raw_pass )
+				) {
+					$legacy_decrypted = Wpfa_Mailconnect_Encryption::decrypt_legacy( $raw_pass );
+				}
+
+				if ( '' !== $legacy_decrypted && $legacy_decrypted !== $raw_pass ) {
+					$pass = $legacy_decrypted;
+
+					// Re-encrypt with the new cipher and persist for auto-migration.
+					if ( method_exists( 'Wpfa_Mailconnect_Encryption', 'encrypt' ) ) {
+						$new_encrypted = Wpfa_Mailconnect_Encryption::encrypt( $legacy_decrypted );
+						
+						if ( $new_encrypted && $new_encrypted !== $legacy_decrypted ) {
+							$options['smtp_pass'] = $new_encrypted;
+							$updated = update_option( 'smtp_options', $options );
+							
+							if ( $updated ) {
+								error_log( '[WPFA Mailconnect] Successfully migrated legacy SMTP password to new encryption format.' );
+							} else {
+								error_log( '[WPFA Mailconnect] WARNING: Legacy password decrypted but migration update failed. Password will need re-decryption on next use.' );
+							}
+						}
+					}
+				} else {
+					// 3) Hard failure: clear pass, log error, and flag for admin notice.
+					$pass = '';
+					error_log( 
+						sprintf(
+							'[WPFA Mailconnect] SMTP decryption failed for host "%s" (user: %s). Credentials must be re-entered on settings page.',
+							$host,
+							$user
+						)
+					);
+					update_option( 'wpfa_mailconnect_smtp_decryption_failed', time() );
+				}
 			}
 		}
+
 		$host 	 = isset( $options['smtp_host'] ) ? trim( $options['smtp_host'] ) : 'localhost';
 		$port 	 = isset( $options['smtp_port'] ) ? (int) $options['smtp_port'] : 25;
 		
