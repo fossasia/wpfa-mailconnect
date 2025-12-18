@@ -562,8 +562,8 @@ class Wpfa_Mailconnect_SMTP {
 			$raw_pass	= $options['smtp_pass'];
 			$decrypted	= Wpfa_Mailconnect_Encryption::decrypt( $raw_pass );
 
-			// 1) Normal path: current decrypt() succeeded.
-			if ( '' !== $decrypted && $decrypted !== $raw_pass ) {
+			// 1) Normal path: current decrypt() succeeded (any non-empty result is treated as success).
+			if ( '' !== $decrypted ) {
 				$pass = $decrypted;
 			} else {
 				$legacy_decrypted = '';
