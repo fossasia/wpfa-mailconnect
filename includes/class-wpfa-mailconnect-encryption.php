@@ -240,7 +240,7 @@ class Wpfa_Mailconnect_Encryption {
 		}
 		
 		// Validate base64 format: alphanumeric + / + = (padding)
-		$base64_pattern = '/^[A-Za-z0-9+\/]+=*$/';
+		$base64_pattern = '/^[A-Za-z0-9+\/]*=*$/';
 		return preg_match( $base64_pattern, $parts[0] ) && preg_match( $base64_pattern, $parts[1] );
 	}
 
