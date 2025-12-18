@@ -129,7 +129,8 @@ class Wpfa_Mailconnect_Admin {
 			if ( ! $screen || 'settings_page_smtp-config' !== $screen->id ) {
 				return;
 			}
-		if ( isset( $_GET['settings-updated'] ) && $_GET['settings-updated'] ) {
+		$settings_updated = filter_input( INPUT_GET, 'settings-updated', FILTER_VALIDATE_BOOLEAN );
+		if ( $settings_updated ) {
 			delete_option( 'wpfa_mailconnect_smtp_decryption_failed' );
 		}
 	}
