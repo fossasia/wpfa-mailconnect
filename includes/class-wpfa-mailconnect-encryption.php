@@ -319,7 +319,7 @@ class Wpfa_Mailconnect_Encryption {
 	 *
 	 * @since 			1.2.4
 	 * @param int 		$length The number of random bytes to generate.
-	 * @return string 	false The random bytes, or false on failure.
+	 * @return string|false The random bytes, or false on failure.
 	 */
 	private static function get_secure_random_bytes( $length ) {
 		if ( function_exists( 'random_bytes' ) ) {
