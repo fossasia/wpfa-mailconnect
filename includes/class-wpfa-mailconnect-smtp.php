@@ -255,7 +255,7 @@ class Wpfa_Mailconnect_SMTP {
 	 * Renders an individual settings field.
 	 *
 	 * Supports text, password, number, select, and checkbox field types.
-	 * Fixes a visibility issue where the password placeholder/hint was hidden by a non-empty value.
+	 * Displays password fields as blank with a placeholder hint when a value is already saved.
 	 *
 	 * @param array $args Field definition and metadata (includes 'id', 'type', 'default', etc.).
 	 * @return void
