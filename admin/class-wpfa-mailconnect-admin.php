@@ -125,10 +125,10 @@ class Wpfa_Mailconnect_Admin {
 	 * @since    1.2.2
 	 */
 	public function clear_decryption_failure_flag() {
-			$screen = get_current_screen();
-			if ( ! $screen || 'settings_page_smtp-config' !== $screen->id ) {
-				return;
-			}
+		$screen = get_current_screen();
+		if ( ! $screen || 'settings_page_smtp-config' !== $screen->id ) {
+			return;
+		}
 		$settings_updated = filter_input( INPUT_GET, 'settings-updated', FILTER_VALIDATE_BOOLEAN );
 		if ( $settings_updated ) {
 			delete_option( 'wpfa_mailconnect_smtp_decryption_failed' );
