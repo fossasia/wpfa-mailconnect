@@ -77,7 +77,7 @@ class Wpfa_Mailconnect_Encryption {
 		try {
 			$key = self::get_encryption_key();
 			
-			// IV length for AES-256-GCM is typically 12 bytes (96 bits) for security
+			// IV length for AES-256-GCM is typically 12 bytes (96 bits), but the actual length is determined by OpenSSL
 			$iv_length = openssl_cipher_iv_length( self::CIPHER_METHOD );
 
 			// Check for unsupported cipher or invalid length
