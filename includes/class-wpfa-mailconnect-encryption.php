@@ -311,20 +311,50 @@ class Wpfa_Mailconnect_Encryption {
 	}
 
 	/**
-	 * Generates an encryption key based on WordPress salts.
+	 * Generates an encryption key based on a dedicated key and WordPress salts.
 	 *
-	 * Uses WordPress AUTH_KEY and SECURE_AUTH_KEY salts to create a unique,
+	 * Prefer a dedicated encryption key (WPFA_MAILCONNECT_ENC_KEY) if defined,
+	 * and combine it with available WordPress salts/keys to create a unique,
 	 * site-specific encryption key.
 	 *
 	 * @since  1.2.0
 	 * @return string The encryption key.
 	 */
 	private static function get_encryption_key() {
-		// Use WordPress salts to create a unique key per site
-		$key = AUTH_KEY . SECURE_AUTH_KEY;
+		$entropy_parts = array();
 
-		// Hash to ensure consistent key length for AES-256 (32 bytes)
-		return hash( 'sha256', $key, true );
+		// Prefer a dedicated encryption key if available (e.g. defined in wp-config.php).
+		if ( defined( 'WPFA_MAILCONNECT_ENC_KEY' ) && WPFA_MAILCONNECT_ENC_KEY ) {
+			$entropy_parts[] = WPFA_MAILCONNECT_ENC_KEY;
+		}
+
+		// Add all available WordPress salts/keys as additional entropy.
+		$wp_salts = array(
+			'AUTH_KEY',
+			'SECURE_AUTH_KEY',
+			'LOGGED_IN_KEY',
+			'NONCE_KEY',
+			'AUTH_SALT',
+			'SECURE_AUTH_SALT',
+			'LOGGED_IN_SALT',
+			'NONCE_SALT',
+		);
+
+		foreach ( $wp_salts as $salt_const ) {
+			if ( defined( $salt_const ) ) {
+				$entropy_parts[] = constant( $salt_const );
+			}
+		}
+
+		// As a final fallback, ensure we never return an empty key material.
+		if ( empty( $entropy_parts ) ) {
+			$entropy_parts[] = 'wpfa_mailconnect_fallback_' . __FILE__;
+		}
+
+		$key_material = implode( '|', $entropy_parts );
+
+		// Hash to ensure consistent key length for AES-256 (32 bytes).
+		return hash( 'sha256', $key_material, true );
 	}
 
 	/**
