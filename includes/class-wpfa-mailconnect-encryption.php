@@ -40,8 +40,7 @@ class Wpfa_Mailconnect_Encryption {
 	 *
 	 * Note: Must be lowercase for OpenSSL functions.
 	 *
-	 * @since 1.2.0 (Changed from AES-256-CBC)
-	 * @since 1.2.0 (Changed to lowercase)
+	 * @since 1.2.0
 	 */
 	const CIPHER_METHOD = 'aes-256-gcm';
 
@@ -89,7 +88,7 @@ class Wpfa_Mailconnect_Encryption {
 		try {
 			$key = self::get_encryption_key();
 			
-			// IV length for AES-256-GCM is typically 12 bytes (96 bits), but the actual length is determined by OpenSSL
+			// Retrieve the IV length for the current cipher method (12 bytes for AES-256-GCM)
 			$iv_length = openssl_cipher_iv_length( self::CIPHER_METHOD );
 
 			// Check for unsupported cipher or invalid length
@@ -191,6 +190,8 @@ class Wpfa_Mailconnect_Encryption {
 			}
 
 			$key       = self::get_encryption_key();
+			
+			// Retrieve the IV length for the current cipher method (12 bytes for AES-256-GCM)
 			$iv_length = openssl_cipher_iv_length( self::CIPHER_METHOD );
 			$tag_length = self::TAG_LENGTH;
 
@@ -267,6 +268,7 @@ class Wpfa_Mailconnect_Encryption {
 		
 		// Validate base64 format: alphanumeric + / + = (padding)
 		$base64_pattern = '/^[A-Za-z0-9+\/]*=*$/';
+		
 		$is_iv_base64        = (bool) preg_match( $base64_pattern, $parts[0] );
 		$is_ciphertext_base64 = (bool) preg_match( $base64_pattern, $parts[1] );
 
@@ -290,6 +292,10 @@ class Wpfa_Mailconnect_Encryption {
 	 *
 	 * Used as a fallback migration path for credentials encrypted 
 	 * with versions prior to 1.2.0.
+	 * 
+	 * SECURITY WARNING: CBC mode lacks authentication and is vulnerable to
+	 * padding oracle attacks. This method exists only for migration compatibility.
+	 * Administrators should re-save credentials to upgrade to GCM encryption.
 	 *
 	 * @since  1.2.0
 	 * @param  string $data The encrypted string.
@@ -318,9 +324,11 @@ class Wpfa_Mailconnect_Encryption {
 		$decrypted = openssl_decrypt( $encrypted_raw, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv );
 
 		if ( false === $decrypted ) {
-			error_log( 'WPFA MailConnect: Legacy decryption failed.' );
+			error_log( 'WPFA MailConnect: Legacy CBC decryption failed.' );
 			return $data;
 		}
+
+		error_log( 'WPFA MailConnect: WARNING - Successfully decrypted password using legacy CBC mode (unauthenticated). Please re-save SMTP credentials on the settings page to upgrade to GCM encryption for better security.' );
 		
 		return $decrypted;
 	}
