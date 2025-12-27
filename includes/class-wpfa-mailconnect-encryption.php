@@ -16,6 +16,18 @@
 /**
  * Encryption utility class definition.
  *
+ * This class uses AES-256-GCM with a non-standard component ordering:
+ * 
+ * Encrypted Format: wpfa_enc_[base64( IV | Tag | Ciphertext )]
+ * 
+ * IMPORTANT: Standard GCM implementations use IV | Ciphertext | Tag ordering.
+ * Our custom ordering places the fixed-length authentication tag before the
+ * variable-length ciphertext for easier parsing. This makes the implementation
+ * incompatible with standard GCM tools and libraries.
+ * 
+ * Do NOT change the component ordering without implementing a migration path,
+ * as it will break decryption of all existing encrypted passwords.
+ *
  * @since      1.2.0
  * @package    Wpfa_Mailconnect
  * @subpackage Wpfa_Mailconnect/includes
@@ -113,8 +125,21 @@ class Wpfa_Mailconnect_Encryption {
 				return $value;
 			}
 
-			// Combine IV, Tag, and encrypted data, then base64 encode
-			// Order: IV | Tag | Ciphertext
+			// IMPORTANT: Non-standard component ordering for easier parsing.
+			// 
+			// Standard GCM format:     IV | Ciphertext | Tag
+			// This implementation uses: IV | Tag | Ciphertext
+			//
+			// Rationale: Fixed-length components (IV, Tag) come first, making
+			// extraction simpler since tag length is constant (16 bytes). This
+			// ordering is functionally equivalent but NOT compatible with standard
+			// GCM tools. Do not change this ordering without a migration path, as
+			// it will break decryption of all existing encrypted data.
+			//
+			// Structure:
+			//   - IV:         First N bytes (typically 12 for AES-256-GCM)
+			//   - Tag:        Next 16 bytes (authentication tag)
+			//   - Ciphertext: Remaining bytes (variable length)
 			$result = base64_encode( $iv . $tag . $encrypted );
 
 			// Add prefix to identify encrypted values
@@ -181,7 +206,8 @@ class Wpfa_Mailconnect_Encryption {
 				return $original_value;
 			}
 
-			// Extract IV, Tag, and encrypted data
+			// Extract components using our non-standard ordering (see encrypt() for details).
+			// Order: IV | Tag | Ciphertext
 			$iv			 = substr( $decoded, 0, $iv_length );
 			$tag		 = substr( $decoded, $iv_length, $tag_length );
 			$encrypted = substr( $decoded, $iv_length + $tag_length );
