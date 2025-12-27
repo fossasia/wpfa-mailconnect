@@ -188,8 +188,9 @@ class Wpfa_Mailconnect_SMTP {
 	 * @return array The sanitized array of options.
 	 */
 	public function sanitize_smtp_options( $input ) {
-		// Cache existing options before merging, needed later for restoring unchanged passwords.
-		// This optimization prevents redundant calls to get_option() during the later password restoration logic.
+		// Cache existing options before merging; this is required so that the previously stored (encrypted)
+		// password can be preserved and restored when the submitted password field is left blank (unchanged),
+		// and it also avoids redundant calls to get_option() during the password preservation logic.
 		$smtp_existing_options = get_option( 'smtp_options', array() );
 		$output = $smtp_existing_options;
 
