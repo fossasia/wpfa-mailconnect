@@ -371,10 +371,37 @@ class Wpfa_Mailconnect_Encryption {
 				$entropy_parts[] = constant( $salt_const );
 			}
 		}
-
-		// As a final fallback, ensure we never return an empty key material.
+		
+		// Final fallback: generate and store a random key if no entropy sources exist.
+		// This should rarely happen (only on severely broken WordPress installations).
 		if ( empty( $entropy_parts ) ) {
-			$entropy_parts[] = 'wpfa_mailconnect_fallback_' . __FILE__;
+			$fallback_key = get_option( 'wpfa_mailconnect_fallback_encryption_key' );
+			
+			if ( ! $fallback_key ) {
+				// Generate cryptographically secure random key
+				if ( function_exists( 'random_bytes' ) ) {
+					try {
+						$fallback_key = bin2hex( random_bytes( 32 ) );
+					} catch ( Exception $e ) {
+						error_log( 'WPFA MailConnect: Failed to generate random fallback key: ' . $e->getMessage() );
+						$fallback_key = false;
+					}
+				}
+				
+				// If random_bytes() unavailable, fail securely
+				if ( ! $fallback_key ) {
+					error_log( 'WPFA MailConnect: CRITICAL - No entropy available for encryption. WordPress salts are not defined and random_bytes() is unavailable. Cannot encrypt passwords securely.' );
+					// Return a clearly invalid key that will fail encryption/decryption
+					// This forces the issue to be visible rather than silently insecure
+					return hash( 'sha256', 'INSECURE_FALLBACK_MUST_FIX_WORDPRESS_SALTS', true );
+				}
+				
+				// Store the generated key persistently
+				update_option( 'wpfa_mailconnect_fallback_encryption_key', $fallback_key, false ); // autoload = false
+				error_log( 'WPFA MailConnect: WARNING - Generated fallback encryption key because WordPress salts are not defined. This should not happen in a properly configured WordPress installation.' );
+			}
+			
+			$entropy_parts[] = $fallback_key;
 		}
 
 		$key_material = implode( '|', $entropy_parts );
