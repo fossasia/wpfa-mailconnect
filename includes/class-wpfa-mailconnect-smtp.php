@@ -558,6 +558,8 @@ class Wpfa_Mailconnect_SMTP {
 		
 		// DECRYPTION: Decrypt password before use and handle failures explicitly.
 		$pass = '';
+		$decryption_failed = false;
+		
 		if ( isset( $options['smtp_pass'] ) ) {
 			$raw_pass	= $options['smtp_pass'];
 			$decrypted	= Wpfa_Mailconnect_Encryption::decrypt( $raw_pass );
@@ -569,11 +571,7 @@ class Wpfa_Mailconnect_SMTP {
 				$legacy_decrypted = '';
 
 				// 2) Migration path: attempt legacy decryption when available.
-				if (
-					method_exists( 'Wpfa_Mailconnect_Encryption', 'decrypt_legacy' )
-					&& method_exists( 'Wpfa_Mailconnect_Encryption', 'is_legacy_encrypted' )
-					&& Wpfa_Mailconnect_Encryption::is_legacy_encrypted( $raw_pass )
-				) {
+				if ( method_exists( 'Wpfa_Mailconnect_Encryption', 'decrypt_legacy' ) ) {
 					$legacy_decrypted = Wpfa_Mailconnect_Encryption::decrypt_legacy( $raw_pass );
 				}
 
@@ -582,26 +580,19 @@ class Wpfa_Mailconnect_SMTP {
 
 					// Re-encrypt with the new cipher and persist for auto-migration.
 					if ( method_exists( 'Wpfa_Mailconnect_Encryption', 'encrypt' ) ) {
-						$new_encrypted = Wpfa_Mailconnect_Encryption::encrypt( $legacy_decrypted );
-						
-						if ( $new_encrypted && $new_encrypted !== $legacy_decrypted ) {
-							$options['smtp_pass'] = $new_encrypted;
-							$updated = update_option( 'smtp_options', $options );
-							
-							if ( $updated ) {
-								error_log( '[WPFA Mailconnect] Successfully migrated legacy SMTP password to new encryption format.' );
-							} else {
-								error_log( '[WPFA Mailconnect] WARNING: Legacy password decrypted but migration update failed. Password will need re-decryption on next use.' );
-							}
-						}
+						$options['smtp_pass'] = Wpfa_Mailconnect_Encryption::encrypt( $legacy_decrypted );
+						update_option( 'smtp_options', $options );
 					}
 				} else {
-					// 3) Hard failure: clear pass, log error, and flag for admin notice.
+					// 3) Hard failure: flag for admin notice and prevent SMTP usage.
+					$decryption_failed = true;
 					$pass = '';
-					error_log( 
+					
+					$host_for_log = isset( $options['smtp_host'] ) ? $options['smtp_host'] : 'unknown';
+					error_log(
 						sprintf(
-							'[WPFA Mailconnect] SMTP decryption failed for host "%s" (user: %s). Credentials must be re-entered on settings page.',
-							$host,
+							'[WPFA Mailconnect] SMTP decryption failed for host "%s" (user: %s). Email sending disabled until credentials are re-entered.',
+							$host_for_log,
 							$user
 						)
 					);
@@ -615,7 +606,7 @@ class Wpfa_Mailconnect_SMTP {
 		
 		// Validate port range (1-65535)
 		if ( $port < 1 || $port > 65535 ) {
-			$port = 25; // fallback to default SMTP port
+			$port = 25;
 		}
 		
 		$secure = isset( $options['smtp_secure'] ) ? $options['smtp_secure'] : '';
@@ -623,25 +614,32 @@ class Wpfa_Mailconnect_SMTP {
 		$from 	= isset( $options['smtp_from'] ) ? trim( $options['smtp_from'] ) : get_option( 'admin_email' );
 		$name 	= isset( $options['smtp_name'] ) ? $options['smtp_name'] : get_bloginfo( 'name' );
 
-		// Only apply SMTP settings if the necessary credentials are provided
-		if ( ! empty( $user ) && ! empty( $host ) ) {
+		// SECURITY: Only configure SMTP if credentials are valid and decryption succeeded.
+		// If decryption failed, let wp_mail() fall back to default mail() function,
+		// which will likely fail and trigger proper error handling.
+		if ( ! empty( $user ) && ! empty( $host ) && ! $decryption_failed ) {
+			// Additional check: if authentication is required, password must not be empty
+			if ( $auth && empty( $pass ) ) {
+				error_log( '[WPFA Mailconnect] SMTP authentication required but password is empty. Skipping SMTP configuration.' );
+				return; // Don't configure SMTP
+			}
+			
 			$phpmailer->isSMTP();
 			$phpmailer->Host 	   = $host;
 			$phpmailer->SMTPAuth   = $auth;
 			$phpmailer->Port 	   = $port;
 			$phpmailer->Username   = $user;
-			$phpmailer->Password   = $pass; // Decrypted password, or empty string on failure
+			$phpmailer->Password   = $pass;
 			$phpmailer->SMTPSecure = $secure;
 
 			// Validate 'From' email address before assignment
 			if ( filter_var( $from, FILTER_VALIDATE_EMAIL ) ) {
 				$phpmailer->From = $from;
 			} else {
-				// Fallback to default WordPress email if configured 'From' is invalid
 				$phpmailer->From = get_option( 'admin_email' );
 				error_log( 'WPFA MailConnect SMTP: Invalid "From" email address provided in settings: ' . $from );
 			}
-			$phpmailer->FromName   = $name;
+			$phpmailer->FromName = $name;
 		}
 
 		// Disable debug output
