@@ -65,31 +65,19 @@ class Wpfa_Mailconnect_Admin {
 	 */
 	public function enqueue_styles() {
 
-		/**
-		 * This function is provided for demonstration purposes only.
-		 *
-		 * An instance of this class should be passed to the run() function
-		 * defined in Wpfa_Mailconnect_Loader as all of the hooks are defined
-		 * in that particular class.
-		 *
-		 * The Wpfa_Mailconnect_Loader will then create the relationship
-		 * between the defined hooks and the functions defined in this
-		 * class.
-		 */
-
 		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/wpfa-mailconnect-admin.css', array(), $this->version, 'all' );
 
-        // Enqueue logs page styles only on the logs page
-        $screen = get_current_screen();
-        if ( $screen && 'settings_page_wpfa-mail-logs' === $screen->id ) {
-            wp_enqueue_style(
-                $this->plugin_name . '-logs',
-                plugin_dir_url( __FILE__ ) . 'css/wpfa-mailconnect-logs.css',
-                array(),
-                $this->version,
-                'all'
-            );
-        }
+		// Enqueue logs page styles only on the logs page
+		$screen = get_current_screen();
+		if ( $screen && 'settings_page_wpfa-mail-logs' === $screen->id ) {
+			wp_enqueue_style(
+				$this->plugin_name . '-logs',
+				plugin_dir_url( __FILE__ ) . 'css/wpfa-mailconnect-logs.css',
+				array(),
+				$this->version,
+				'all'
+			);
+		}
 	}
 
 	/**
@@ -99,56 +87,88 @@ class Wpfa_Mailconnect_Admin {
 	 */
 	public function enqueue_scripts() {
 
-		/**
-		 * This function is provided for demonstration purposes only.
-		 *
-		 * An instance of this class should be passed to the run() function
-		 * defined in Wpfa_Mailconnect_Loader as all of the hooks are defined
-		 * in that particular class.
-		 *
-		 * The Wpfa_Mailconnect_Loader will then create the relationship
-		 * between the defined hooks and the functions defined in this
-		 * class.
-		 */
-
 		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/wpfa-mailconnect-admin.js', array( 'jquery' ), $this->version, false );
 
 	}
 
-    /**
-     * Add the Email Logs submenu page under Settings.
-     */
-    public function add_logs_page() {
-        // Menu Label and Page Title
-        $page_title = esc_html__( 'Email Logs', 'wpfa-mailconnect' );
-        $menu_title = esc_html__( 'Email Logs', 'wpfa-mailconnect' );
+	/**
+	 * Displays an admin notice if SMTP credentials could not be decrypted.
+	 *
+	 * @since    1.2.0
+	 */
+	public function display_decryption_failure_notice() {
+		// Only show to users who can manage options
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
 
-        add_submenu_page(
-            'options-general.php',
-            $page_title,
-            $menu_title,
-            'manage_options',
-            'wpfa-mail-logs',
-            array( $this, 'render_logs_page' )
-        );
-    }
+		$failure_time = get_option( 'wpfa_mailconnect_smtp_decryption_failed' );
 
-    /**
-     * Renders the Email Logs page, including the filter form and the log table.
-     */
-    public function render_logs_page() {
+		if ( $failure_time ) {
+			?>
+			<div class="notice notice-error">
+				<p>
+					<strong><?php esc_html_e( 'WPFA Mailconnect:', 'wpfa-mailconnect' ); ?></strong>
+					<?php esc_html_e( 'The stored SMTP password could not be decrypted (likely due to a security update or server change). SMTP authentication will fail until you re-enter and save your credentials.', 'wpfa-mailconnect' ); ?>
+					<a href="<?php echo esc_url( admin_url( 'options-general.php?page=smtp-config' ) ); ?>">
+						<?php esc_html_e( 'Go to Settings', 'wpfa-mailconnect' ); ?>
+					</a>
+				</p>
+			</div>
+			<?php
+		}
+	}
+
+	/**
+	 * Clears the decryption failure flag when settings are updated.
+	 *
+	 * @since    1.2.0
+	 */
+	public function clear_decryption_failure_flag() {
+		$screen = get_current_screen();
+		if ( ! $screen || 'settings_page_smtp-config' !== $screen->id ) {
+			return;
+		}
+		$settings_updated = filter_input( INPUT_GET, 'settings-updated', FILTER_VALIDATE_BOOLEAN );
+		if ( $settings_updated ) {
+			delete_option( 'wpfa_mailconnect_smtp_decryption_failed' );
+		}
+	}
+
+	/**
+	 * Add the Email Logs submenu page under Settings.
+	 */
+	public function add_logs_page() {
+		// Menu Label and Page Title
+		$page_title = esc_html__( 'Email Logs', 'wpfa-mailconnect' );
+		$menu_title = esc_html__( 'Email Logs', 'wpfa-mailconnect' );
+
+		add_submenu_page(
+			'options-general.php',
+			$page_title,
+			$menu_title,
+			'manage_options',
+			'wpfa-mail-logs',
+			array( $this, 'render_logs_page' )
+		);
+	}
+
+	/**
+	 * Renders the Email Logs page, including the filter form and the log table.
+	 */
+	public function render_logs_page() {
 		// Checks that the current user has permission (manage_options = administrator)
-        if ( ! current_user_can( 'manage_options' ) ) {
-            // Permission denied message
-            wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'wpfa-mailconnect' ) );
-        }
+		if ( ! current_user_can( 'manage_options' ) ) {
+			// Permission denied message
+			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'wpfa-mailconnect' ) );
+		}
 
-        $logger = new Wpfa_Mailconnect_Logger();
+		$logger = new Wpfa_Mailconnect_Logger();
 
 		// --- Filtering and Pagination setup ---
-        $per_page     = 20;
-        $current_page = isset( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1;
-        $offset       = ( $current_page - 1 ) * $per_page;
+		$per_page     = 20;
+		$current_page = isset( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1;
+		$offset       = ( $current_page - 1 ) * $per_page;
 
 		// Filtering parameters
 		$filter_status  = isset( $_GET['status'] ) ? sanitize_text_field( $_GET['status'] ) : '';
@@ -158,29 +178,29 @@ class Wpfa_Mailconnect_Admin {
 
 		$filter_search  = isset( $_GET['s'] ) ? sanitize_text_field( $_GET['s'] ) : '';
 
-        // Get paginated and filtered logs and total count
+		// Get paginated and filtered logs and total count
 		$logs       = $logger->get_logs( $per_page, $offset, $filter_status, $filter_search );
 		$total_logs = $logger->get_total_logs( $filter_status, $filter_search );
-        $total_pages = ceil( $total_logs / $per_page );
+		$total_pages = ceil( $total_logs / $per_page );
 
 		// Base URL for links
 		$base_url = admin_url( 'options-general.php?page=wpfa-mail-logs' );
 
-        // --- Start HTML Output ---
-        ?>
-        <div class="wrap">
-            <h1><?php esc_html_e( 'Email Logs', 'wpfa-mailconnect' ); ?></h1>
+		// --- Start HTML Output ---
+		?>
+		<div class="wrap">
+			<h1><?php esc_html_e( 'Email Logs', 'wpfa-mailconnect' ); ?></h1>
 
-            <?php 
-            // SECURE FIX: Check for the success transient instead of a URL parameter.
-            $logs_cleared = get_transient( 'wpfa_mailconnect_logs_cleared' );
-            if ( false !== $logs_cleared && 'success' === $logs_cleared ) : 
-                delete_transient( 'wpfa_mailconnect_logs_cleared' ); // Delete after displaying
-            ?>
-                <div class="notice notice-success">
-                    <p><?php esc_html_e( 'Logs cleared successfully!', 'wpfa-mailconnect' ); ?></p>
-                </div>
-            <?php endif; ?>
+			<?php 
+			// SECURE FIX: Check for the success transient instead of a URL parameter.
+			$logs_cleared = get_transient( 'wpfa_mailconnect_logs_cleared' );
+			if ( false !== $logs_cleared && 'success' === $logs_cleared ) : 
+				delete_transient( 'wpfa_mailconnect_logs_cleared' ); // Delete after displaying
+			?>
+				<div class="notice notice-success">
+					<p><?php esc_html_e( 'Logs cleared successfully!', 'wpfa-mailconnect' ); ?></p>
+				</div>
+			<?php endif; ?>
 
 			<?php
 			// Generate nonce for the form
@@ -199,26 +219,25 @@ class Wpfa_Mailconnect_Admin {
 				</p>
 			</form>
 
-            <!-- Log Filter Form -->
-            <form method="get" class="search-form">
-                <input type="hidden" name="page" value="wpfa-mail-logs" />
-                
-                <label for="status-filter" class="screen-reader-text"><?php esc_html_e( 'Filter by Status', 'wpfa-mailconnect' ); ?></label>
-                <select name="status" id="status-filter">
-                    <option value=""><?php esc_html_e( 'All Statuses', 'wpfa-mailconnect' ); ?></option>
+			<!-- Log Filter Form -->
+			<form method="get" class="search-form">
+				<input type="hidden" name="page" value="wpfa-mail-logs" />
+				
+				<label for="status-filter" class="screen-reader-text"><?php esc_html_e( 'Filter by Status', 'wpfa-mailconnect' ); ?></label>
+				<select name="status" id="status-filter">
+					<option value=""><?php esc_html_e( 'All Statuses', 'wpfa-mailconnect' ); ?></option>
 					<!-- UPDATE: Add 'pending' status option -->
 					<option value="pending" <?php selected( $filter_status, 'pending' ); ?>><?php esc_html_e( 'Pending', 'wpfa-mailconnect' ); ?></option>
-                    <option value="success" <?php selected( $filter_status, 'success' ); ?>><?php esc_html_e( 'Success', 'wpfa-mailconnect' ); ?></option>
-                    <option value="failed" <?php selected( $filter_status, 'failed' ); ?>><?php esc_html_e( 'Failed', 'wpfa-mailconnect' ); ?></option>
-                </select>
+					<option value="success" <?php selected( $filter_status, 'success' ); ?>><?php esc_html_e( 'Success', 'wpfa-mailconnect' ); ?></option>
+					<option value="failed" <?php selected( $filter_status, 'failed' ); ?>><?php esc_html_e( 'Failed', 'wpfa-mailconnect' ); ?></option>
+				</select>
 
-                <label for="log-search-input" class="screen-reader-text"><?php esc_html_e( 'Search Recipient', 'wpfa-mailconnect' ); ?></label>
-                <input type="search" id="log-search-input" name="s" value="<?php echo esc_attr( $filter_search ); ?>" placeholder="<?php esc_attr_e( 'Search Recipient...', 'wpfa-mailconnect' ); ?>" />
+				<label for="log-search-input" class="screen-reader-text"><?php esc_html_e( 'Search Recipient', 'wpfa-mailconnect' ); ?></label>
+				<input type="search" id="log-search-input" name="s" value="<?php echo esc_attr( $filter_search ); ?>" placeholder="<?php esc_attr_e( 'Search Recipient...', 'wpfa-mailconnect' ); ?>" />
 
-                <?php submit_button( esc_html__( 'Filter/Search', 'wpfa-mailconnect' ), 'primary', 'submit', false ); ?>
-            </form>
-            <!-- End Log Filter Form -->
-
+				<?php submit_button( esc_html__( 'Filter/Search', 'wpfa-mailconnect' ), 'primary', 'submit', false ); ?>
+			</form>
+			<!-- End Log Filter Form -->
 
 			<?php if ( ! empty( $logs ) ) : ?>
 				<table class="wp-list-table widefat fixed striped">
@@ -234,15 +253,15 @@ class Wpfa_Mailconnect_Admin {
 					<tbody>
 						<?php foreach ( $logs as $log ) : ?>
 						<tr class="<?php 
-                            // UPDATE: Determine class based on status, including 'pending'
-                            $row_class = 'log-success';
-                            if ( 'failed' === $log->status ) {
-                                $row_class = 'log-failed';
-                            } elseif ( 'pending' === $log->status ) {
-                                $row_class = 'log-pending';
-                            }
-                            echo esc_attr( $row_class ); 
-                        ?>">
+							// UPDATE: Determine class based on status, including 'pending'
+							$row_class = 'log-success';
+							if ( 'failed' === $log->status ) {
+								$row_class = 'log-failed';
+							} elseif ( 'pending' === $log->status ) {
+								$row_class = 'log-pending';
+							}
+							echo esc_attr( $row_class ); 
+						?>">
 							<td><?php echo esc_html( $log->created_at ); ?></td>
 							<td><?php echo esc_html( $log->to_email ); ?></td>
 							<td><?php echo esc_html( $log->subject ); ?></td>
@@ -257,8 +276,8 @@ class Wpfa_Mailconnect_Admin {
 					</tbody>
 				</table>
 
-                <?php
-                // Add pagination
+				<?php
+				// Add pagination
 				$pagination_args = array(
 					'base'      => add_query_arg( 'paged', '%#%', $base_url ),
 					'format'    => '',
@@ -276,32 +295,32 @@ class Wpfa_Mailconnect_Admin {
 					$pagination_args['base'] = add_query_arg( 's', $filter_search, $pagination_args['base'] );
 				}
 
-                echo '<div class="tablenav bottom">';
-                echo '<div class="tablenav-pages">';
+				echo '<div class="tablenav bottom">';
+				echo '<div class="tablenav-pages">';
 				echo wp_kses_post( paginate_links( $pagination_args ) );
-                echo '</div>';
-                echo '</div>';
-                ?>
-            <?php else : ?>
-                <p><?php esc_html_e( 'No email logs found', 'wpfa-mailconnect' ); ?>.</p>
-            <?php endif; ?>
-        </div>
+				echo '</div>';
+				echo '</div>';
+				?>
+			<?php else : ?>
+				<p><?php esc_html_e( 'No email logs found', 'wpfa-mailconnect' ); ?>.</p>
+			<?php endif; ?>
+		</div>
 		<?php
 	}
 
-    /**
-     * Handles the clearing of all email logs after security checks.
-     */
-    public function handle_clear_logs() {
+	/**
+	 * Handles the clearing of all email logs after security checks.
+	 */
+	public function handle_clear_logs() {
 		// Ensures only admins can clear logs
 		if ( ! current_user_can( 'manage_options' ) ) {
-            // Unauthorized access message
+			// Unauthorized access message
 			wp_die( esc_html__( 'Unauthorized access', 'wpfa-mailconnect' ) );
-        }
+		}
 
 		// Security check: Use wp_verify_nonce for the action's nonce
 		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( $_POST['_wpnonce'], 'clear_email_logs_nonce' ) ) {
-            // Invalid nonce message
+			// Invalid nonce message
 			wp_die( esc_html__( 'Invalid nonce', 'wpfa-mailconnect' ) );
 		}
 
@@ -309,7 +328,7 @@ class Wpfa_Mailconnect_Admin {
 		$logger->clear_logs();
 
 		// SECURE FIX: Set a transient instead of using a URL parameter for success message display.
-        set_transient( 'wpfa_mailconnect_logs_cleared', 'success', MINUTE_IN_SECONDS );
+		set_transient( 'wpfa_mailconnect_logs_cleared', 'success', MINUTE_IN_SECONDS );
 
 		wp_safe_redirect(
 			add_query_arg(
@@ -319,6 +338,6 @@ class Wpfa_Mailconnect_Admin {
 				admin_url( 'options-general.php' )
 			)
 		);
-        exit;
-    }
+		exit;
+	}
 }

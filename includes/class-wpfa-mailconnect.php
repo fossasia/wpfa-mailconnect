@@ -171,6 +171,11 @@ class Wpfa_Mailconnect {
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-wpfa-mailconnect-smtp.php';
 
+		/**
+		 * The class responsible for encryption utilities.
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-wpfa-mailconnect-encryption.php';
+
 		$this->loader = new Wpfa_Mailconnect_Loader();
 
 	}
@@ -224,7 +229,11 @@ class Wpfa_Mailconnect {
 
         // Instantiate the Updater and register its migration check hook.
         $this->updater = new Wpfa_Mailconnect_Updater();
-		$this->loader->add_action( 'admin_init', $this->updater, 'check_for_updates' ); 
+		$this->loader->add_action( 'admin_init', $this->updater, 'check_for_updates' );
+
+		// Displays admin alerts for SMTP decryption failures and automatically clears them when settings are saved
+		$this->loader->add_action( 'admin_notices', $plugin_admin, 'display_decryption_failure_notice' );
+		$this->loader->add_action( 'admin_init', $plugin_admin, 'clear_decryption_failure_flag' );
 	}
 
 	/**
