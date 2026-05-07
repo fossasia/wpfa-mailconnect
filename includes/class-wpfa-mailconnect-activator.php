@@ -33,9 +33,11 @@ class Wpfa_Mailconnect_Activator {
 	public static function activate() {
 		// Create the email logs table
 		require_once plugin_dir_path( __FILE__ ) . 'class-wpfa-mailconnect-logger.php';
+		require_once plugin_dir_path( __FILE__ ) . 'class-wpfa-mailconnect-queue.php';
 		
 		// Call the static method to create the table
 		Wpfa_Mailconnect_Logger::create_log_table();
+		Wpfa_Mailconnect_Queue::create_table();
 
 		// Set the initial DB version for the migration system.
 		// add_option only succeeds if the option does not already exist, which is perfect for activation.
@@ -48,6 +50,18 @@ class Wpfa_Mailconnect_Activator {
 			// This event will be hooked into by the main plugin class (class-wpfa-mailconnect.php)
 			wp_schedule_event( time(), 'daily', $cleanup_hook );
 		}
+
+		add_filter(
+			'cron_schedules',
+			function( $schedules ) {
+				$schedules[ Wpfa_Mailconnect_Queue::CRON_INTERVAL ] = array(
+					'interval' => 5 * MINUTE_IN_SECONDS,
+					'display'  => __( 'Every 5 Minutes', 'wpfa-mailconnect' ),
+				);
+				return $schedules;
+			}
+		);
+		Wpfa_Mailconnect_Queue::schedule_processing();
 	}
 
 }

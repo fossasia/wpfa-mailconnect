@@ -92,6 +92,27 @@ class Wpfa_Mailconnect_Admin {
 	}
 
 	/**
+	 * Renders a compact WordPress visual editor for template settings.
+	 *
+	 * @since 1.3.0
+	 * @param string $field_id The smtp_options field id.
+	 * @param string $value The current editor value.
+	 * @return void
+	 */
+	public static function render_email_template_editor( $field_id, $value ) {
+		wp_editor(
+			$value,
+			'smtp_options_' . sanitize_key( $field_id ),
+			array(
+				'textarea_name' => 'smtp_options[' . sanitize_key( $field_id ) . ']',
+				'textarea_rows' => 6,
+				'media_buttons' => false,
+				'teeny'         => true,
+			)
+		);
+	}
+
+	/**
 	 * Displays an admin notice if SMTP credentials could not be decrypted.
 	 *
 	 * @since    1.2.0
@@ -191,6 +212,8 @@ class Wpfa_Mailconnect_Admin {
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Email Logs', 'wpfa-mailconnect' ); ?></h1>
 
+			<?php $this->render_queue_status_widget(); ?>
+
 			<?php 
 			// SECURE FIX: Check for the success transient instead of a URL parameter.
 			$logs_cleared = get_transient( 'wpfa_mailconnect_logs_cleared' );
@@ -228,6 +251,7 @@ class Wpfa_Mailconnect_Admin {
 					<option value=""><?php esc_html_e( 'All Statuses', 'wpfa-mailconnect' ); ?></option>
 					<!-- UPDATE: Add 'pending' status option -->
 					<option value="pending" <?php selected( $filter_status, 'pending' ); ?>><?php esc_html_e( 'Pending', 'wpfa-mailconnect' ); ?></option>
+					<option value="queued" <?php selected( $filter_status, 'queued' ); ?>><?php esc_html_e( 'Queued', 'wpfa-mailconnect' ); ?></option>
 					<option value="success" <?php selected( $filter_status, 'success' ); ?>><?php esc_html_e( 'Success', 'wpfa-mailconnect' ); ?></option>
 					<option value="failed" <?php selected( $filter_status, 'failed' ); ?>><?php esc_html_e( 'Failed', 'wpfa-mailconnect' ); ?></option>
 				</select>
@@ -246,6 +270,7 @@ class Wpfa_Mailconnect_Admin {
 							<th><?php esc_html_e( 'Date', 'wpfa-mailconnect' ); ?></th>
 							<th><?php esc_html_e( 'To', 'wpfa-mailconnect' ); ?></th>
 							<th><?php esc_html_e( 'Subject', 'wpfa-mailconnect' ); ?></th>
+							<th><?php esc_html_e( 'Attachments', 'wpfa-mailconnect' ); ?></th>
 							<th><?php esc_html_e( 'Status', 'wpfa-mailconnect' ); ?></th>
 							<th><?php esc_html_e( 'Error', 'wpfa-mailconnect' ); ?></th>
 						</tr>
@@ -257,6 +282,8 @@ class Wpfa_Mailconnect_Admin {
 							$row_class = 'log-success';
 							if ( 'failed' === $log->status ) {
 								$row_class = 'log-failed';
+							} elseif ( 'queued' === $log->status ) {
+								$row_class = 'log-pending';
 							} elseif ( 'pending' === $log->status ) {
 								$row_class = 'log-pending';
 							}
@@ -265,6 +292,7 @@ class Wpfa_Mailconnect_Admin {
 							<td><?php echo esc_html( $log->created_at ); ?></td>
 							<td><?php echo esc_html( $log->to_email ); ?></td>
 							<td><?php echo esc_html( $log->subject ); ?></td>
+							<td><?php echo esc_html( $this->format_attachment_log_summary( $log->status_details ) ); ?></td>
 							<td>
 								<span class="log-status log-status-<?php echo esc_attr( $log->status ); ?>">
 									<?php echo esc_html( ucfirst( $log->status ) ); ?>
@@ -339,5 +367,59 @@ class Wpfa_Mailconnect_Admin {
 			)
 		);
 		exit;
+	}
+
+	/**
+	 * Formats safe attachment metadata from a log entry.
+	 *
+	 * @since 1.3.0
+	 * @param string $status_details JSON status details.
+	 * @return string Human-readable attachment summary.
+	 */
+	private function format_attachment_log_summary( $status_details ) {
+		$details = json_decode( (string) $status_details, true );
+		if ( ! is_array( $details ) || empty( $details['attachments_included'] ) ) {
+			return __( 'No', 'wpfa-mailconnect' );
+		}
+
+		$count = isset( $details['attachment_count'] ) ? absint( $details['attachment_count'] ) : 0;
+
+		return sprintf(
+			/* translators: %d: attachment count */
+			_n( 'Yes (%d file)', 'Yes (%d files)', $count, 'wpfa-mailconnect' ),
+			$count
+		);
+	}
+
+	/**
+	 * Renders queue status counts on the logs screen.
+	 *
+	 * @since 1.3.0
+	 * @return void
+	 */
+	private function render_queue_status_widget() {
+		if ( ! class_exists( 'Wpfa_Mailconnect_Queue' ) ) {
+			return;
+		}
+
+		$queue  = new Wpfa_Mailconnect_Queue();
+		$counts = $queue->get_status_counts();
+		?>
+		<div class="notice notice-info inline">
+			<p>
+				<strong><?php esc_html_e( 'Email Queue:', 'wpfa-mailconnect' ); ?></strong>
+				<?php
+				printf(
+					/* translators: 1: queued count, 2: processing count, 3: sent count, 4: failed count */
+					esc_html__( 'Queued: %1$d | Processing: %2$d | Sent: %3$d | Failed: %4$d', 'wpfa-mailconnect' ),
+					absint( $counts['queued'] ),
+					absint( $counts['processing'] ),
+					absint( $counts['sent'] ),
+					absint( $counts['failed'] )
+				);
+				?>
+			</p>
+		</div>
+		<?php
 	}
 }
