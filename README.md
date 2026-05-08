@@ -4,6 +4,8 @@ A WordPress plugin scaffold by FOSSASIA to integrate email connectivity into sit
 It ships with a standard, maintainable structure (`admin/`, `includes/`, `public/`, `languages/`) and an uninstall routine, ready for adding SMTP/API providers, settings screens, and helper functions.
 Licensed under Apache-2.0.
 
+Current stable release: **1.0.0**.
+
 ## Features
 
 Current repository status: minimal plugin skeleton prepared for adding mail connectivity features.
@@ -92,6 +94,17 @@ Suggested next tasks:
 * Provide a **Send Test Email** action to verify connectivity
 * Optionally, add a logging mechanism (WP_Logging or custom table) guarded by capability checks
 * Write unit tests for adapters (mock transport)
+
+## Changelog
+
+### 1.0.0 - Initial stable release
+
+* First stable release of WPFA Mail Connect.
+* Aligns plugin metadata, runtime constants, and database schema versioning for the stable release.
+
+### Pre-release
+
+Earlier internal milestones used `1.2.0` labels while the plugin was still preparing for its first stable release. Those changes are included in `1.0.0` as pre-release development history.
 
 ## Coding standards
 
