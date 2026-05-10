@@ -339,7 +339,6 @@ class Wpfa_Mailconnect_SMTP {
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'SMTP Email Configuration', 'wpfa-mailconnect' ); ?></h1>
-			<?php settings_errors(); ?>
 
 			<form method="post" action="options.php">
 				<?php
