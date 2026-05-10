@@ -51,16 +51,6 @@ class Wpfa_Mailconnect_Activator {
 			wp_schedule_event( time(), 'daily', $cleanup_hook );
 		}
 
-		add_filter(
-			'cron_schedules',
-			function( $schedules ) {
-				$schedules[ Wpfa_Mailconnect_Queue::CRON_INTERVAL ] = array(
-					'interval' => 5 * MINUTE_IN_SECONDS,
-					'display'  => __( 'Every 5 Minutes', 'wpfa-mailconnect' ),
-				);
-				return $schedules;
-			}
-		);
 		if ( Wpfa_Mailconnect_Queue::is_queue_enabled() ) {
 			Wpfa_Mailconnect_Queue::schedule_processing();
 		}

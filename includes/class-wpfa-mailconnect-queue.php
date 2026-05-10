@@ -358,13 +358,14 @@ class Wpfa_Mailconnect_Queue {
 		$failed  = $retries >= self::MAX_RETRIES;
 		$status  = $failed ? 'failed' : 'queued';
 		$delay   = min( 60, 5 * $retries );
+		$next_attempt = gmdate( 'Y-m-d H:i:s', current_time( 'timestamp' ) + ( $delay * MINUTE_IN_SECONDS ) );
 
 		$wpdb->update(
 			$this->table_name,
 			array(
 				'status'          => $status,
 				'retries'         => $retries,
-				'next_attempt_at' => date( 'Y-m-d H:i:s', current_time( 'timestamp' ) + ( $delay * MINUTE_IN_SECONDS ) ),
+				'next_attempt_at' => $next_attempt,
 				'updated_at'      => current_time( 'mysql' ),
 			),
 			array( 'id' => absint( $item->id ) ),
