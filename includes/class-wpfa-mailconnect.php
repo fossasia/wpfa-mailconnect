@@ -214,7 +214,7 @@ class Wpfa_Mailconnect {
 		// instantiate smtp manager and register its hooks
 		$this->smtp = new Wpfa_Mailconnect_SMTP( $this->get_plugin_name(), $this->get_version() );
 
-		$this->loader->add_action( 'admin_menu', $this->smtp, 'register_admin_menu' );
+		$this->loader->add_action( 'admin_menu', $plugin_admin, 'register_admin_menu' );
 		$this->loader->add_action( 'admin_init', $this->smtp, 'settings_init' );
 		$this->loader->add_action( 'admin_post_smtp_send_test', $this->smtp, 'handle_test_email' );
 		$this->loader->add_action( 'phpmailer_init', $this->smtp, 'phpmailer_override' );

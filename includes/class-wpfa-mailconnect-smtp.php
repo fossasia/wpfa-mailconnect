@@ -72,21 +72,16 @@ class Wpfa_Mailconnect_SMTP {
 		$this->logger = new Wpfa_Mailconnect_Logger();
 	}
 
-	/* --- Admin menu / settings registration --- */
-
 	/**
-	 * Register the plugin options page under Settings.
+	 * Renders the settings page when registered from the shared admin menu.
 	 *
 	 * @return void
 	 */
-	public function register_admin_menu() {
-		add_options_page(
-			__( 'SMTP Email Settings', 'wpfa-mailconnect' ),
-			__( 'SMTP Config', 'wpfa-mailconnect' ),
-			'manage_options',
-			'smtp-config',
-			array( $this, 'render_settings_page' )
-		);
+	public static function render_settings_page_static() {
+		$version = defined( 'WPFA_MAILCONNECT_VERSION' ) ? WPFA_MAILCONNECT_VERSION : '1.0.0';
+		$smtp    = new self( 'wpfa-mailconnect', $version );
+
+		$smtp->render_settings_page();
 	}
 
 	/**
