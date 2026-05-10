@@ -109,6 +109,7 @@ class Wpfa_Mailconnect_Email_Logger_Service {
 		$subject   = isset( $args['subject'] ) ? $args['subject'] : 'No Subject';
 		$message   = isset( $args['message'] ) ? $args['message'] : '';
 		$headers   = $this->format_headers( isset( $args['headers'] ) ? $args['headers'] : '' );
+		$attachment_details = $this->get_attachment_details( isset( $args['attachments'] ) ? $args['attachments'] : array() );
 		
 		// Extract HTML body if present (WordPress may add this)
 		$body_html = '';
@@ -123,7 +124,8 @@ class Wpfa_Mailconnect_Email_Logger_Service {
 			$subject,
 			$message,
 			$body_html,
-			$headers
+			$headers,
+			wp_json_encode( $attachment_details )
 		);
 
 		// MUST return args unchanged for wp_mail to work
@@ -152,7 +154,14 @@ class Wpfa_Mailconnect_Email_Logger_Service {
 				$this->current_mail_hash,
 				'success',
 				'',
-				'Email sent successfully at ' . current_time( 'mysql' )
+				wp_json_encode(
+					array_merge(
+						array(
+							'message' => 'Email sent successfully at ' . current_time( 'mysql' ),
+						),
+						$this->get_attachment_details( isset( $args['attachments'] ) ? $args['attachments'] : array() )
+					)
+				)
 			);
 
 			// Clear the hash to prevent duplicate updates
@@ -224,24 +233,7 @@ class Wpfa_Mailconnect_Email_Logger_Service {
 	 * @return   string            The MD5 hash of the email content.
 	 */
 	private function generate_hash( $args ) {
-		$to_raw      = isset( $args['to'] ) ? $args['to'] : '';
-		$subject_raw = isset( $args['subject'] ) ? $args['subject'] : '';
-		$message_raw = isset( $args['message'] ) ? $args['message'] : '';
-		$headers_raw = isset( $args['headers'] ) ? $args['headers'] : '';
-		
-		// Normalize 'to' field: ensure array, convert to lowercase, remove duplicates, sort.
-		$to_array = is_array( $to_raw ) ? $to_raw : array( (string) $to_raw );
-		$to_array = array_values( array_unique( array_map( 'strtolower', $to_array ) ) );
-		sort( $to_array );
-
-		$normalized_data = array(
-			'to'      => $to_array,
-			'subject' => trim( strtolower( (string) $subject_raw ) ),
-			'message' => trim( (string) $message_raw ),
-			'headers' => $headers_raw,
-		);
-
-		return md5( wp_json_encode( $normalized_data ) );
+		return Wpfa_Mailconnect_Logger::generate_mail_hash( $args );
 	}
 
 	/**
@@ -302,13 +294,61 @@ class Wpfa_Mailconnect_Email_Logger_Service {
 	 * @return   string                Detailed error information as JSON string.
 	 */
 	private function get_error_details( $error ) {
+		$error_data = $error->get_error_data();
+		$attachments = array();
+		if ( is_array( $this->current_mail_data ) && isset( $this->current_mail_data['attachments'] ) ) {
+			$attachments = $this->current_mail_data['attachments'];
+		} elseif ( is_array( $error_data ) && isset( $error_data['attachments'] ) ) {
+			$attachments = $error_data['attachments'];
+		}
+		if ( is_array( $error_data ) && isset( $error_data['attachments'] ) ) {
+			unset( $error_data['attachments'] );
+		}
+
 		$details = array(
 			'code'    => $error->get_error_code(),
 			'message' => $error->get_error_message(),
-			'data'    => $error->get_error_data(),
+			'data'    => $error_data,
 			'time'    => current_time( 'mysql' ),
 		);
 
-		return wp_json_encode( $details );
+		return wp_json_encode( array_merge( $details, $this->get_attachment_details( $attachments ) ) );
+	}
+
+	/**
+	 * Builds safe attachment metadata for logs.
+	 *
+	 * @since 1.3.0
+	 * @param mixed $attachments The wp_mail attachments argument.
+	 * @return array Attachment presence and count only.
+	 */
+	private function get_attachment_details( $attachments ) {
+		if ( empty( $attachments ) ) {
+			return array(
+				'attachments_included' => false,
+				'attachment_count'     => 0,
+			);
+		}
+
+		if ( is_string( $attachments ) ) {
+			$attachments = preg_split( '/\r\n|\r|\n/', $attachments );
+		}
+
+		if ( ! is_array( $attachments ) ) {
+			$attachments = array( $attachments );
+		}
+
+		$attachments = array_filter(
+			$attachments,
+			function( $attachment ) {
+				return is_scalar( $attachment ) && '' !== trim( (string) $attachment );
+			}
+		);
+		$count       = count( $attachments );
+
+		return array(
+			'attachments_included' => $count > 0,
+			'attachment_count'     => $count,
+		);
 	}
 }

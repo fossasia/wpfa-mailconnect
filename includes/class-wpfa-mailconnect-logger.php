@@ -122,6 +122,92 @@ class Wpfa_Mailconnect_Logger {
 	// --- New Logger API Methods for Status Lifecycle ---
 
 	/**
+	 * Generates a deterministic hash for a wp_mail payload.
+	 *
+	 * @since 1.3.0
+	 * @param array $args The wp_mail arguments array.
+	 * @return string MD5 hash of normalized mail content.
+	 */
+	public static function generate_mail_hash( $args ) {
+		$to_raw          = isset( $args['to'] ) ? $args['to'] : '';
+		$subject_raw     = isset( $args['subject'] ) ? $args['subject'] : '';
+		$message_raw     = isset( $args['message'] ) ? $args['message'] : '';
+		$headers_raw     = isset( $args['headers'] ) ? $args['headers'] : '';
+		$attachments_raw = isset( $args['attachments'] ) ? $args['attachments'] : array();
+
+		$to_array = is_array( $to_raw ) ? $to_raw : array( (string) $to_raw );
+		$to_array = array_values( array_unique( array_map( 'strtolower', $to_array ) ) );
+		sort( $to_array );
+
+		$normalized_data = array(
+			'to'          => $to_array,
+			'subject'     => trim( strtolower( (string) $subject_raw ) ),
+			'message'     => trim( (string) $message_raw ),
+			'headers'     => $headers_raw,
+			'attachments' => self::get_attachment_hash_details( $attachments_raw ),
+		);
+
+		return md5( wp_json_encode( $normalized_data ) );
+	}
+
+	/**
+	 * Builds safe attachment metadata for deterministic hashing.
+	 *
+	 * @since 1.3.0
+	 * @param mixed $attachments The wp_mail attachments argument.
+	 * @return array Safe attachment metadata for hashing.
+	 */
+	private static function get_attachment_hash_details( $attachments ) {
+		if ( empty( $attachments ) ) {
+			return array(
+				'attachments_included' => false,
+				'attachment_count'     => 0,
+				'attachment_refs'      => array(),
+			);
+		}
+
+		if ( is_string( $attachments ) ) {
+			$attachments = preg_split( '/\r\n|\r|\n/', $attachments );
+		}
+
+		if ( ! is_array( $attachments ) ) {
+			$attachments = array( $attachments );
+		}
+
+		$attachments = array_filter(
+			$attachments,
+			function( $attachment ) {
+				return is_scalar( $attachment ) && '' !== trim( (string) $attachment );
+			}
+		);
+
+		$attachment_refs = array();
+
+		foreach ( $attachments as $attachment ) {
+			$attachment_path = (string) $attachment;
+			$attachment_refs[] = array(
+				'name' => basename( $attachment_path ),
+				'size' => is_readable( $attachment_path ) ? filesize( $attachment_path ) : null,
+			);
+		}
+
+		usort(
+			$attachment_refs,
+			function( $first, $second ) {
+				return strcmp( wp_json_encode( $first ), wp_json_encode( $second ) );
+			}
+		);
+
+		$count = count( $attachment_refs );
+
+		return array(
+			'attachments_included' => $count > 0,
+			'attachment_count'     => $count,
+			'attachment_refs'      => $attachment_refs,
+		);
+	}
+
+	/**
 	 * Inserts a new log entry with status 'pending' if the hash does not already exist.
 	 * This method prevents deterministic duplicates at the database level.
 	 *
@@ -132,9 +218,10 @@ class Wpfa_Mailconnect_Logger {
 	 * @param string $message The email body (plain text).
 	 * @param string $body_html The email body (HTML).
 	 * @param string $headers The email headers (JSON or string).
+	 * @param string $status_details Safe status details JSON.
 	 * @return bool True on successful insertion, False if the query fails or if hash already exists.
 	 */
-	public function insert_pending( $hash, $to, $subject, $message, $body_html, $headers = '' ) {
+	public function insert_pending( $hash, $to, $subject, $message, $body_html, $headers = '', $status_details = '' ) {
 		global $wpdb;
 		$table = $this->log_table_name;
 
@@ -143,11 +230,12 @@ class Wpfa_Mailconnect_Logger {
 		$message   = substr( $message, 0, 1048576 );
 		$body_html = substr( $body_html, 0, 1048576 );
 		$headers   = substr( $headers, 0, 65535 ); // Truncate headers for text column
+		$status_details = substr( $status_details, 0, 65535 );
 
 		// The SQL query is corrected here to include 'headers' in the column list
 		$result = $wpdb->query( $wpdb->prepare(
-			"INSERT INTO $table (hash, to_email, subject, message, body_html, status, error_message, headers, created_at)
-			  SELECT %s, %s, %s, %s, %s, 'pending', %s, %s, %s
+			"INSERT INTO $table (hash, to_email, subject, message, body_html, status, error_message, status_details, headers, created_at)
+			  SELECT %s, %s, %s, %s, %s, 'pending', %s, %s, %s, %s
 			WHERE NOT EXISTS (SELECT 1 FROM $table WHERE hash = %s)",
 			$hash,            // %s: hash
 			$to,              // %s: to_email
@@ -155,6 +243,7 @@ class Wpfa_Mailconnect_Logger {
 			$message,         // %s: message
 			$body_html,       // %s: body_html
 			'',               // %s: error_message (empty for pending)
+			$status_details,  // %s: status_details
 			$headers,         // %s: headers
 			current_time('mysql'), // %s: created_at
 			$hash             // %s: for WHERE NOT EXISTS clause
