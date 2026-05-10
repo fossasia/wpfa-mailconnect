@@ -155,13 +155,14 @@ class Wpfa_Mailconnect_Logger {
 	 *
 	 * @since 1.3.0
 	 * @param mixed $attachments The wp_mail attachments argument.
-	 * @return array Attachment presence and count only.
+	 * @return array Safe attachment metadata for hashing.
 	 */
 	private static function get_attachment_hash_details( $attachments ) {
 		if ( empty( $attachments ) ) {
 			return array(
 				'attachments_included' => false,
 				'attachment_count'     => 0,
+				'attachment_refs'      => array(),
 			);
 		}
 
@@ -180,11 +181,29 @@ class Wpfa_Mailconnect_Logger {
 			}
 		);
 
-		$count = count( $attachments );
+		$attachment_refs = array();
+
+		foreach ( $attachments as $attachment ) {
+			$attachment_path = (string) $attachment;
+			$attachment_refs[] = array(
+				'name' => basename( $attachment_path ),
+				'size' => is_readable( $attachment_path ) ? filesize( $attachment_path ) : null,
+			);
+		}
+
+		usort(
+			$attachment_refs,
+			function( $first, $second ) {
+				return strcmp( wp_json_encode( $first ), wp_json_encode( $second ) );
+			}
+		);
+
+		$count = count( $attachment_refs );
 
 		return array(
 			'attachments_included' => $count > 0,
 			'attachment_count'     => $count,
+			'attachment_refs'      => $attachment_refs,
 		);
 	}
 

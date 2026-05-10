@@ -61,7 +61,9 @@ class Wpfa_Mailconnect_Activator {
 				return $schedules;
 			}
 		);
-		Wpfa_Mailconnect_Queue::schedule_processing();
+		if ( Wpfa_Mailconnect_Queue::is_queue_enabled() ) {
+			Wpfa_Mailconnect_Queue::schedule_processing();
+		}
 	}
 
 }

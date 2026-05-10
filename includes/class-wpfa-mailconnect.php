@@ -243,7 +243,6 @@ class Wpfa_Mailconnect {
 		// Register the asynchronous email queue processor.
 		$this->queue = new Wpfa_Mailconnect_Queue();
 		$this->loader->add_filter( 'cron_schedules', $this->queue, 'add_cron_schedules' );
-		$this->loader->add_action( 'init', $this->queue, 'schedule_processing' );
 		$this->loader->add_action( Wpfa_Mailconnect_Queue::PROCESS_CRON_HOOK, $this->queue, 'process_queue_batch' );
 
 		// Initialize and register the consolidated email logging service (v1.2.1)

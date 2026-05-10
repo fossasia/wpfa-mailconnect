@@ -331,6 +331,14 @@ class Wpfa_Mailconnect_SMTP {
 			}
 		}
 
+		if ( class_exists( 'Wpfa_Mailconnect_Queue' ) ) {
+			if ( isset( $output['enable_email_queue'] ) && '1' === (string) $output['enable_email_queue'] ) {
+				Wpfa_Mailconnect_Queue::schedule_processing();
+			} else {
+				Wpfa_Mailconnect_Queue::unschedule_processing();
+			}
+		}
+
 		return $output;
 	}
 

@@ -105,12 +105,23 @@ class Wpfa_Mailconnect_Queue {
 	}
 
 	/**
+	 * Indicates if email queueing is enabled in settings.
+	 *
+	 * @return bool
+	 */
+	public static function is_queue_enabled() {
+		$options = get_option( 'smtp_options', array() );
+
+		return isset( $options['enable_email_queue'] ) && '1' === (string) $options['enable_email_queue'];
+	}
+
+	/**
 	 * Schedules queue processing.
 	 *
 	 * @return void
 	 */
 	public static function schedule_processing() {
-		if ( ! wp_next_scheduled( self::PROCESS_CRON_HOOK ) ) {
+		if ( self::is_queue_enabled() && ! wp_next_scheduled( self::PROCESS_CRON_HOOK ) ) {
 			wp_schedule_event( time() + MINUTE_IN_SECONDS, self::CRON_INTERVAL, self::PROCESS_CRON_HOOK );
 		}
 	}
