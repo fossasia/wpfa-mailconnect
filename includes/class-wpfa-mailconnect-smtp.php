@@ -669,21 +669,61 @@ class Wpfa_Mailconnect_SMTP {
 	 * @return mixed Headers with HTML content type.
 	 */
 	private function ensure_html_content_type_header( $headers ) {
-		if ( empty( $headers ) ) {
-			return array( 'Content-Type: text/html; charset=UTF-8' );
-		}
+		$html_content_type = 'Content-Type: text/html; charset=UTF-8';
 
-		$headers_string = is_array( $headers ) ? implode( "\n", $headers ) : (string) $headers;
-		if ( false !== stripos( $headers_string, 'Content-Type:' ) ) {
-			return $headers;
+		if ( empty( $headers ) ) {
+			return array( $html_content_type );
 		}
 
 		if ( is_array( $headers ) ) {
-			$headers[] = 'Content-Type: text/html; charset=UTF-8';
-			return $headers;
+			$filtered_headers   = array();
+			$has_html_type      = false;
+			$has_content_type   = false;
+
+			foreach ( $headers as $header ) {
+				if ( 0 === stripos( (string) $header, 'Content-Type:' ) ) {
+					$has_content_type = true;
+
+					if ( false !== stripos( (string) $header, 'text/html' ) ) {
+						$has_html_type      = true;
+						$filtered_headers[] = $header;
+					}
+
+					continue;
+				}
+
+				$filtered_headers[] = $header;
+			}
+
+			if ( ! $has_html_type ) {
+				$filtered_headers[] = $html_content_type;
+			}
+
+			return $filtered_headers;
 		}
 
-		return trim( $headers . "\nContent-Type: text/html; charset=UTF-8" );
+		$header_lines      = preg_split( '/\r\n|\r|\n/', (string) $headers );
+		$filtered_lines    = array();
+		$has_html_type     = false;
+
+		foreach ( $header_lines as $header_line ) {
+			if ( 0 === stripos( $header_line, 'Content-Type:' ) ) {
+				if ( false !== stripos( $header_line, 'text/html' ) ) {
+					$has_html_type   = true;
+					$filtered_lines[] = $header_line;
+				}
+
+				continue;
+			}
+
+			$filtered_lines[] = $header_line;
+		}
+
+		if ( ! $has_html_type ) {
+			$filtered_lines[] = $html_content_type;
+		}
+
+		return trim( implode( "\n", array_filter( $filtered_lines, 'strlen' ) ) );
 	}
 
 
