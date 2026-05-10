@@ -94,7 +94,7 @@ class Wpfa_Mailconnect_Admin {
 	/**
 	 * Displays an admin notice if SMTP credentials could not be decrypted.
 	 *
-	 * @since    1.2.0
+	 * @since    1.0.0
 	 */
 	public function display_decryption_failure_notice() {
 		// Only show to users who can manage options
@@ -122,7 +122,7 @@ class Wpfa_Mailconnect_Admin {
 	/**
 	 * Clears the decryption failure flag when settings are updated.
 	 *
-	 * @since    1.2.0
+	 * @since    1.0.0
 	 */
 	public function clear_decryption_failure_flag() {
 		$screen = get_current_screen();

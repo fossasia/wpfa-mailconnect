@@ -8,7 +8,7 @@
  *
  * @link       https://fossasia.org
  * @since      1.0.0
- * @version    1.2.0 (Updated for full HTML content and detailed status logging)
+ * @version    1.0.0 (Updated for full HTML content and detailed status logging)
  * @package    Wpfa_Mailconnect
  * @subpackage Wpfa_Mailconnect/includes
  */
@@ -26,7 +26,7 @@ class Wpfa_Mailconnect_Logger {
 	/**
      * Defines the allowed log status values for filtering and validation.
      *
-     * @since 1.2.1
+     * @since 1.0.0
      */
     const ALLOWED_STATUSES = array( 'pending', 'success', 'failed' );
 	
@@ -125,7 +125,7 @@ class Wpfa_Mailconnect_Logger {
 	 * Inserts a new log entry with status 'pending' if the hash does not already exist.
 	 * This method prevents deterministic duplicates at the database level.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 * @param string $hash The deterministic hash of the email content.
 	 * @param string $to The recipient email address(es) (CSV format).
 	 * @param string $subject The email subject.
@@ -167,7 +167,7 @@ class Wpfa_Mailconnect_Logger {
 	/**
      * Updates the status, error message, and detailed status/ID for a log entry identified by its hash.
      *
-     * @since 1.2.0
+     * @since 1.0.0
      * @param string $hash The deterministic hash of the email content.
 	 * @param string $status The result status ('success' or 'failed').
      * @param string $error The high-level error message (used for display).

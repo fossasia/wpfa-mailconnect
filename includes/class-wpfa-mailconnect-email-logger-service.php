@@ -8,7 +8,7 @@
  * It ensures atomic operations and prevents race conditions.
  *
  * @link       https://fossasia.org
- * @since      1.2.1
+ * @since      1.0.0
  * @package    Wpfa_Mailconnect
  * @subpackage Wpfa_Mailconnect/includes
  */
@@ -19,7 +19,7 @@
  * This service hooks into WordPress's wp_mail filter and wp_mail_failed action
  * to capture all email sends in a consolidated, atomic way.
  *
- * @since      1.2.1
+ * @since      1.0.0
  * @package    Wpfa_Mailconnect
  * @subpackage Wpfa_Mailconnect/includes
  * @author     FOSSASIA <info@fossasia.org>
@@ -29,7 +29,7 @@ class Wpfa_Mailconnect_Email_Logger_Service {
 	/**
 	 * The logger instance for database operations.
 	 *
-	 * @since    1.2.1
+	 * @since    1.0.0
 	 * @access   private
 	 * @var      Wpfa_Mailconnect_Logger    $logger    The logger instance.
 	 */
@@ -38,7 +38,7 @@ class Wpfa_Mailconnect_Email_Logger_Service {
 	/**
 	 * Stores the hash of the currently processing email.
 	 *
-	 * @since    1.2.1
+	 * @since    1.0.0
 	 * @access   private
 	 * @var      string    $current_mail_hash    Current email hash for linking status updates.
 	 */
@@ -47,7 +47,7 @@ class Wpfa_Mailconnect_Email_Logger_Service {
 	/**
 	 * Stores the current email data for status updates.
 	 *
-	 * @since    1.2.1
+	 * @since    1.0.0
 	 * @access   private
 	 * @var      array    $current_mail_data    Current email data.
 	 */
@@ -56,7 +56,7 @@ class Wpfa_Mailconnect_Email_Logger_Service {
 	/**
 	 * Constructor. Initializes the logger.
 	 *
-	 * @since    1.2.1
+	 * @since    1.0.0
 	 * @param    Wpfa_Mailconnect_Logger    $logger    Optional. Logger instance.
 	 */
 	public function __construct( $logger = null ) {
@@ -69,7 +69,7 @@ class Wpfa_Mailconnect_Email_Logger_Service {
 	 * This method should be called during plugin initialization to register
 	 * the appropriate hooks for email logging.
 	 *
-	 * @since    1.2.1
+	 * @since    1.0.0
 	 */
 	public function register_hooks() {
 		// Hook into wp_mail filter to log pending emails (priority 10, before send)
@@ -87,7 +87,7 @@ class Wpfa_Mailconnect_Email_Logger_Service {
 	 *
 	 * This runs early in the wp_mail filter chain (priority 10).
 	 *
-	 * @since    1.2.1
+	 * @since    1.0.0
 	 * @param    array    $args    The wp_mail arguments array.
 	 * @return   array             The unmodified arguments (must return for wp_mail to work).
 	 */
@@ -136,7 +136,7 @@ class Wpfa_Mailconnect_Email_Logger_Service {
 	 * This runs late in the wp_mail filter chain (priority 999).
 	 * If we reach this point, wp_mail succeeded (didn't trigger wp_mail_failed).
 	 *
-	 * @since    1.2.1
+	 * @since    1.0.0
 	 * @param    array    $args    The wp_mail arguments array.
 	 * @return   array             The unmodified arguments.
 	 */
@@ -168,7 +168,7 @@ class Wpfa_Mailconnect_Email_Logger_Service {
 	 *
 	 * This is triggered by WordPress's wp_mail_failed action.
 	 *
-	 * @since    1.2.1
+	 * @since    1.0.0
 	 * @param    WP_Error    $error    The error object from wp_mail.
 	 */
 	public function log_email_failure( $error ) {
@@ -206,7 +206,7 @@ class Wpfa_Mailconnect_Email_Logger_Service {
 	/**
 	 * Checks if email logging is enabled in settings.
 	 *
-	 * @since    1.2.1
+	 * @since    1.0.0
 	 * @return   bool    True if logging is enabled, false otherwise.
 	 */
 	private function is_logging_enabled() {
@@ -219,7 +219,7 @@ class Wpfa_Mailconnect_Email_Logger_Service {
 	 *
 	 * This hash is used to prevent duplicate logging of the same email.
 	 *
-	 * @since    1.2.1
+	 * @since    1.0.0
 	 * @param    array    $args    The wp_mail arguments array.
 	 * @return   string            The MD5 hash of the email content.
 	 */
@@ -247,7 +247,7 @@ class Wpfa_Mailconnect_Email_Logger_Service {
 	/**
 	 * Formats recipient email addresses into a comma-separated string.
 	 *
-	 * @since    1.2.1
+	 * @since    1.0.0
 	 * @param    mixed    $recipients    String or array of recipient emails.
 	 * @return   string                  Comma-separated email addresses.
 	 */
@@ -263,7 +263,7 @@ class Wpfa_Mailconnect_Email_Logger_Service {
 	 *
 	 * Converts headers array to JSON or keeps as string.
 	 *
-	 * @since    1.2.1
+	 * @since    1.0.0
 	 * @param    mixed    $headers    Headers as string or array.
 	 * @return   string               Formatted headers string.
 	 */
@@ -277,7 +277,7 @@ class Wpfa_Mailconnect_Email_Logger_Service {
 	/**
 	 * Checks if the email content is HTML based on headers or content type.
 	 *
-	 * @since    1.2.1
+	 * @since    1.0.0
 	 * @param    array    $args    The wp_mail arguments.
 	 * @return   bool              True if HTML content, false otherwise.
 	 */
@@ -297,7 +297,7 @@ class Wpfa_Mailconnect_Email_Logger_Service {
 	/**
 	 * Extracts detailed error information from WP_Error object.
 	 *
-	 * @since    1.2.1
+	 * @since    1.0.0
 	 * @param    WP_Error    $error    The WP_Error object.
 	 * @return   string                Detailed error information as JSON string.
 	 */
