@@ -93,6 +93,7 @@ class Wpfa_Mailconnect_Updater {
             '1.0.1' => 'update_to_1_0_1',
         // Migration for 1.2.0: Adds 'body_html' and 'status_details' columns.
             '1.2.0' => 'update_to_1_2_0', 
+            '1.3.0' => 'update_to_1_3_0',
         );
 
         foreach ( $migration_methods as $version => $method ) {
@@ -138,6 +139,21 @@ class Wpfa_Mailconnect_Updater {
         
         if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
             error_log( 'WPFA MailConnect Database migrated to 1.2.0 (added body_html and status_details).' );
+        }
+    }
+
+    /**
+     * Migration function for version 1.3.0: Adds the asynchronous email queue table.
+     *
+     * @since 1.3.0
+     * @return void
+     */
+    private function update_to_1_3_0() {
+        require_once plugin_dir_path( __FILE__ ) . 'class-wpfa-mailconnect-queue.php';
+        Wpfa_Mailconnect_Queue::create_table();
+
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            error_log( 'WPFA MailConnect Database migrated to 1.3.0 (added email queue table).' );
         }
     }
 

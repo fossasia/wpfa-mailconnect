@@ -30,6 +30,7 @@ class Wpfa_Mailconnect_Deactivator {
 	public static function deactivate() {
 		// Clear the scheduled daily log cleanup cron job
 		wp_clear_scheduled_hook( 'wpfa_mailconnect_cleanup_logs' );
+		wp_clear_scheduled_hook( 'wpfa_mailconnect_process_queue' );
 	}
 
 }

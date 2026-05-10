@@ -85,6 +85,15 @@ class Wpfa_Mailconnect {
 	protected $email_logger_service;
 
 	/**
+	 * Email queue manager instance.
+	 *
+	 * @since 1.3.0
+	 * @access protected
+	 * @var Wpfa_Mailconnect_Queue
+	 */
+	protected $queue;
+
+	/**
 	 * Define the core functionality of the plugin.
 	 *
 	 * Set the plugin name and the plugin version that can be used throughout the plugin.
@@ -160,6 +169,11 @@ class Wpfa_Mailconnect {
 		 * The class responsible for consolidated email logging service.
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-wpfa-mailconnect-email-logger-service.php';
+
+		/**
+		 * The class responsible for asynchronous email queueing.
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-wpfa-mailconnect-queue.php';
 	
         /**
          * The class responsible for database schema versioning and migration.
@@ -218,6 +232,12 @@ class Wpfa_Mailconnect {
 		$this->loader->add_action( 'admin_init', $this->smtp, 'settings_init' );
 		$this->loader->add_action( 'admin_post_smtp_send_test', $this->smtp, 'handle_test_email' );
 		$this->loader->add_action( 'phpmailer_init', $this->smtp, 'phpmailer_override' );
+		$this->loader->add_filter( 'pre_wp_mail', $this->smtp, 'queue_email', 10, 2 );
+
+		// Register the asynchronous email queue processor.
+		$this->queue = new Wpfa_Mailconnect_Queue();
+		$this->loader->add_filter( 'cron_schedules', $this->queue, 'add_cron_schedules' );
+		$this->loader->add_action( Wpfa_Mailconnect_Queue::PROCESS_CRON_HOOK, $this->queue, 'process_queue_batch' );
 
 		// Initialize and register the consolidated email logging service (v1.2.1)
 		// This replaces the old scattered logging hooks for better maintainability
