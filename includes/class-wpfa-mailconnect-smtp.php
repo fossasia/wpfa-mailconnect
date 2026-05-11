@@ -333,6 +333,7 @@ class Wpfa_Mailconnect_SMTP {
 		}
 		?>
 		<div class="wrap">
+			<?php Wpfa_Mailconnect_Admin::render_back_to_mail_connect_link(); ?>
 			<h1><?php esc_html_e( 'SMTP Email Configuration', 'wpfa-mailconnect' ); ?></h1>
 			<?php settings_errors(); ?>
 

@@ -68,7 +68,7 @@ class Wpfa_Mailconnect_Admin {
 
 		// Enqueue logs page styles only on the logs page
 		$screen = get_current_screen();
-		if ( $screen && 'mail-connect_page_wpfa-mail-logs' === $screen->id ) {
+		if ( $screen && 'admin_page_wpfa-mail-logs' === $screen->id ) {
 			wp_enqueue_style(
 				$this->plugin_name . '-logs',
 				plugin_dir_url( __FILE__ ) . 'css/wpfa-mailconnect-logs.css',
@@ -125,7 +125,7 @@ class Wpfa_Mailconnect_Admin {
 	 */
 	public function clear_decryption_failure_flag() {
 		$screen = get_current_screen();
-		if ( ! $screen || 'mail-connect_page_smtp-config' !== $screen->id ) {
+		if ( ! $screen || 'admin_page_smtp-config' !== $screen->id ) {
 			return;
 		}
 		$settings_updated = filter_input( INPUT_GET, 'settings-updated', FILTER_VALIDATE_BOOLEAN );
@@ -135,7 +135,11 @@ class Wpfa_Mailconnect_Admin {
 	}
 
 	/**
-	 * Registers the top-level Mail Connect admin menu and submenus.
+	 * Registers Mail Connect dashboard and orphan admin pages for SMTP/logs.
+	 *
+	 * SMTP and Email Logs use add_submenu_page( '', … ) so they remain in global
+	 * $submenu (required for admin.php?page= URLs and caps) but do not attach to
+	 * any visible menu slug—only the dashboard Quick Links point to them.
 	 */
 	public function register_admin_menu() {
 		add_menu_page(
@@ -148,32 +152,37 @@ class Wpfa_Mailconnect_Admin {
 			58
 		);
 
-		add_submenu_page(
-			'wpfa-mailconnect',
-			__( 'Dashboard', 'wpfa-mailconnect' ),
-			__( 'Dashboard', 'wpfa-mailconnect' ),
-			'manage_options',
-			'wpfa-mailconnect',
-			array( $this, 'render_dashboard_page' )
-		);
+		remove_submenu_page( 'wpfa-mailconnect', 'wpfa-mailconnect' );
 
 		add_submenu_page(
-			'wpfa-mailconnect',
+			'',
 			__( 'SMTP Settings', 'wpfa-mailconnect' ),
-			__( 'SMTP Settings', 'wpfa-mailconnect' ),
+			'',
 			'manage_options',
 			'smtp-config',
 			array( 'Wpfa_Mailconnect_SMTP', 'render_settings_page_static' )
 		);
 
 		add_submenu_page(
-			'wpfa-mailconnect',
+			'',
 			__( 'Email Logs', 'wpfa-mailconnect' ),
-			__( 'Email Logs', 'wpfa-mailconnect' ),
+			'',
 			'manage_options',
 			'wpfa-mail-logs',
 			array( $this, 'render_logs_page' )
 		);
+	}
+
+	/**
+	 * Link back to the Mail Connect dashboard (SMTP/logs are not in the sidebar).
+	 *
+	 * @return void
+	 */
+	public static function render_back_to_mail_connect_link() {
+		$url = admin_url( 'admin.php?page=wpfa-mailconnect' );
+		echo '<p class="wpfa-mailconnect-back"><a href="' . esc_url( $url ) . '">&larr; ';
+		esc_html_e( 'Mail Connect home', 'wpfa-mailconnect' );
+		echo '</a></p>';
 	}
 
 	/**
@@ -257,6 +266,7 @@ class Wpfa_Mailconnect_Admin {
 		// --- Start HTML Output ---
 		?>
 		<div class="wrap">
+			<?php self::render_back_to_mail_connect_link(); ?>
 			<h1><?php esc_html_e( 'Email Logs', 'wpfa-mailconnect' ); ?></h1>
 
 			<?php 
