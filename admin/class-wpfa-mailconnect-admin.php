@@ -52,7 +52,6 @@ class Wpfa_Mailconnect_Admin {
 		$this->plugin_name = $plugin_name;
 		$this->version     = $version;
 
-		add_action( 'admin_menu', array( $this, 'add_logs_page' ) );
 		// Changed to admin_post_ to handle clear logs action securely
 		add_action( 'admin_post_clear_email_logs', array( $this, 'handle_clear_logs' ) );
 
@@ -69,7 +68,7 @@ class Wpfa_Mailconnect_Admin {
 
 		// Enqueue logs page styles only on the logs page
 		$screen = get_current_screen();
-		if ( $screen && 'settings_page_wpfa-mail-logs' === $screen->id ) {
+		if ( $screen && 'wpfa-mailconnect_page_wpfa-mail-logs' === $screen->id ) {
 			wp_enqueue_style(
 				$this->plugin_name . '-logs',
 				plugin_dir_url( __FILE__ ) . 'css/wpfa-mailconnect-logs.css',
@@ -110,7 +109,7 @@ class Wpfa_Mailconnect_Admin {
 				<p>
 					<strong><?php esc_html_e( 'WPFA Mailconnect:', 'wpfa-mailconnect' ); ?></strong>
 					<?php esc_html_e( 'The stored SMTP password could not be decrypted (likely due to a security update or server change). SMTP authentication will fail until you re-enter and save your credentials.', 'wpfa-mailconnect' ); ?>
-					<a href="<?php echo esc_url( admin_url( 'options-general.php?page=smtp-config' ) ); ?>">
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=smtp-config' ) ); ?>">
 						<?php esc_html_e( 'Go to Settings', 'wpfa-mailconnect' ); ?>
 					</a>
 				</p>
@@ -126,7 +125,7 @@ class Wpfa_Mailconnect_Admin {
 	 */
 	public function clear_decryption_failure_flag() {
 		$screen = get_current_screen();
-		if ( ! $screen || 'settings_page_smtp-config' !== $screen->id ) {
+		if ( ! $screen || 'wpfa-mailconnect_page_smtp-config' !== $screen->id ) {
 			return;
 		}
 		$settings_updated = filter_input( INPUT_GET, 'settings-updated', FILTER_VALIDATE_BOOLEAN );
@@ -136,21 +135,81 @@ class Wpfa_Mailconnect_Admin {
 	}
 
 	/**
-	 * Add the Email Logs submenu page under Settings.
+	 * Registers the Mail Connect top-level menu (dashboard) and submenu pages.
+	 *
+	 * WordPress duplicates the top-level slug as the first submenu; that entry is
+	 * removed so the parent menu opens the dashboard with no redundant item.
 	 */
-	public function add_logs_page() {
-		// Menu Label and Page Title
-		$page_title = esc_html__( 'Email Logs', 'wpfa-mailconnect' );
-		$menu_title = esc_html__( 'Email Logs', 'wpfa-mailconnect' );
+	public function register_admin_menu() {
+		add_menu_page(
+			__( 'Mail Connect', 'wpfa-mailconnect' ),
+			__( 'Mail Connect', 'wpfa-mailconnect' ),
+			'manage_options',
+			'wpfa-mailconnect',
+			array( $this, 'render_dashboard_page' ),
+			'dashicons-email-alt',
+			58
+		);
+
+		remove_submenu_page( 'wpfa-mailconnect', 'wpfa-mailconnect' );
 
 		add_submenu_page(
-			'options-general.php',
-			$page_title,
-			$menu_title,
+			'wpfa-mailconnect',
+			__( 'SMTP Settings', 'wpfa-mailconnect' ),
+			__( 'SMTP Settings', 'wpfa-mailconnect' ),
+			'manage_options',
+			'smtp-config',
+			array( 'Wpfa_Mailconnect_SMTP', 'render_settings_page_static' )
+		);
+
+		add_submenu_page(
+			'wpfa-mailconnect',
+			__( 'Email Logs', 'wpfa-mailconnect' ),
+			__( 'Email Logs', 'wpfa-mailconnect' ),
 			'manage_options',
 			'wpfa-mail-logs',
 			array( $this, 'render_logs_page' )
 		);
+	}
+
+	/**
+	 * Link back to the Mail Connect dashboard from submenu screens.
+	 *
+	 * @return void
+	 */
+	public static function render_back_to_mail_connect_link() {
+		$url = admin_url( 'admin.php?page=wpfa-mailconnect' );
+		echo '<p class="wpfa-mailconnect-back"><a href="' . esc_url( $url ) . '">&larr; ';
+		esc_html_e( 'Mail Connect home', 'wpfa-mailconnect' );
+		echo '</a></p>';
+	}
+
+	/**
+	 * Renders the Mail Connect dashboard landing page.
+	 */
+	public function render_dashboard_page() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'wpfa-mailconnect' ) );
+		}
+
+		?>
+		<div class="wrap wpfa-mailconnect-dashboard">
+			<div class="wpfa-mailconnect-dashboard__hero">
+				<p class="wpfa-mailconnect-dashboard__eyebrow"><?php esc_html_e( 'FOSSASIA Mail Connect', 'wpfa-mailconnect' ); ?></p>
+				<h1><?php esc_html_e( 'Mail Connect', 'wpfa-mailconnect' ); ?></h1>
+				<p><?php esc_html_e( 'Configure SMTP delivery, monitor outgoing email activity, and keep WordPress mail workflows visible from one place.', 'wpfa-mailconnect' ); ?></p>
+			</div>
+
+			<div class="wpfa-mailconnect-dashboard__panel">
+				<h2><?php esc_html_e( 'Get Started', 'wpfa-mailconnect' ); ?></h2>
+				<ol>
+					<li><?php esc_html_e( 'Add your SMTP host, port, authentication, and sender details.', 'wpfa-mailconnect' ); ?></li>
+					<li><?php esc_html_e( 'Send a test email to confirm delivery.', 'wpfa-mailconnect' ); ?></li>
+					<li><?php esc_html_e( 'Review email logs to troubleshoot delivery status.', 'wpfa-mailconnect' ); ?></li>
+				</ol>
+			</div>
+		</div>
+		<?php
 	}
 
 	/**
@@ -184,11 +243,12 @@ class Wpfa_Mailconnect_Admin {
 		$total_pages = ceil( $total_logs / $per_page );
 
 		// Base URL for links
-		$base_url = admin_url( 'options-general.php?page=wpfa-mail-logs' );
+		$base_url = admin_url( 'admin.php?page=wpfa-mail-logs' );
 
 		// --- Start HTML Output ---
 		?>
 		<div class="wrap">
+			<?php self::render_back_to_mail_connect_link(); ?>
 			<h1><?php esc_html_e( 'Email Logs', 'wpfa-mailconnect' ); ?></h1>
 
 			<?php 
@@ -335,7 +395,7 @@ class Wpfa_Mailconnect_Admin {
 				array(
 					'page'    => 'wpfa-mail-logs',
 				),
-				admin_url( 'options-general.php' )
+				admin_url( 'admin.php' )
 			)
 		);
 		exit;
