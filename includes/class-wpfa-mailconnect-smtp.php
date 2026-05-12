@@ -64,6 +64,13 @@ class Wpfa_Mailconnect_SMTP {
 			'smtp_port' 	 	 => array( 'label' => 'SMTP Port', 'default' => '587', 'type' => 'number' ),
 			'smtp_secure' 	 	 => array( 'label' => 'Encryption', 'default' => 'tls', 'type' => 'select', 'options' => array( 'tls' => 'TLS (Recommended)', 'ssl' => 'SSL', '' => 'None' ) ),
 			'smtp_auth' 	 	 => array( 'label' => 'Authentication Required?', 'default' => '1', 'type' => 'select', 'options' => array( '1' => 'Yes', '0' => 'No' ) ),
+			'enable_html_template' => array( 'label' => 'Enable HTML Email Template', 'default' => '0', 'type' => 'checkbox', 'description' => 'Wrap outgoing WordPress emails in the configured HTML template.' ),
+			'email_template_header' => array( 'label' => 'Template Header', 'default' => get_bloginfo( 'name' ), 'type' => 'wysiwyg', 'description' => 'Content displayed above each email body.' ),
+			'email_template_footer' => array( 'label' => 'Template Footer', 'default' => sprintf( __( 'Sent by %s', 'wpfa-mailconnect' ), get_bloginfo( 'name' ) ), 'type' => 'wysiwyg', 'description' => 'Content displayed below each email body.' ),
+			'email_template_primary_color' => array( 'label' => 'Brand Color', 'default' => '#2563eb', 'type' => 'color', 'description' => 'Used for the template header and accent elements.' ),
+			'email_template_background_color' => array( 'label' => 'Page Background Color', 'default' => '#f4f7fb', 'type' => 'color' ),
+			'email_template_content_background_color' => array( 'label' => 'Content Background Color', 'default' => '#ffffff', 'type' => 'color' ),
+			'email_template_max_width' => array( 'label' => 'Email Width', 'default' => '640', 'type' => 'number', 'description' => 'Maximum template width in pixels.' ),
 			'enable_log' 	 	 => array( 'label' => 'Enable Email Logging', 'default' => '1', 'type' => 'checkbox', 'description' => 'Uncheck this to stop logging all emails sent through WordPress.' ),
 			'log_retention_days' => array( 'label' => 'Log Retention Days', 'default' => '90', 'type' => 'number', 'description' => 'Automatically delete logs older than this many days (0 for never).' ),
 		);
@@ -106,7 +113,7 @@ class Wpfa_Mailconnect_SMTP {
 		// Register core SMTP fields
 		foreach ( $this->fields as $id => $args ) {
 			// Skip logging fields in the main section
-			if ( 'enable_log' === $id || 'log_retention_days' === $id ) {
+			if ( 'enable_log' === $id || 'log_retention_days' === $id || 0 === strpos( $id, 'email_template_' ) || 'enable_html_template' === $id ) {
 				continue;
 			}
 			add_settings_field(
@@ -145,6 +152,35 @@ class Wpfa_Mailconnect_SMTP {
 			array_merge( $this->fields['log_retention_days'], array( 'id' => 'log_retention_days' ) )
 		);
 
+		// HTML Email Template Section
+		add_settings_section(
+			'smtp_template_section',
+			__( 'HTML Email Template', 'wpfa-mailconnect' ),
+			array( $this, 'template_section_callback' ),
+			'smtp-config'
+		);
+
+		$template_fields = array(
+			'enable_html_template',
+			'email_template_header',
+			'email_template_footer',
+			'email_template_primary_color',
+			'email_template_background_color',
+			'email_template_content_background_color',
+			'email_template_max_width',
+		);
+
+		foreach ( $template_fields as $template_field ) {
+			add_settings_field(
+				$template_field,
+				$this->fields[ $template_field ]['label'],
+				array( $this, 'render_field' ),
+				'smtp-config',
+				'smtp_template_section',
+				array_merge( $this->fields[ $template_field ], array( 'id' => $template_field ) )
+			);
+		}
+
 		// Send Test Email Section
 		add_settings_section(
 			'smtp_test_section',
@@ -171,6 +207,15 @@ class Wpfa_Mailconnect_SMTP {
 	 */
 	public function logging_section_callback() {
 		echo '<p>' . esc_html__( 'Control how emails are logged and manage data retention.', 'wpfa-mailconnect' ) . '</p>';
+	}
+
+	/**
+	 * Callback for the HTML template settings section description.
+	 *
+	 * @return void
+	 */
+	public function template_section_callback() {
+		echo '<p>' . esc_html__( 'Customize the branded HTML wrapper applied to outgoing WordPress emails when templating is enabled.', 'wpfa-mailconnect' ) . '</p>';
 	}
 
 	/**
@@ -212,6 +257,13 @@ class Wpfa_Mailconnect_SMTP {
 						case 'select':
 							$output[ $id ] = sanitize_text_field( $input[ $id ] );
 							break;
+						case 'wysiwyg':
+							$output[ $id ] = wp_kses_post( $input[ $id ] );
+							break;
+						case 'color':
+							$color = sanitize_hex_color( $input[ $id ] );
+							$output[ $id ] = $color ? $color : $args['default'];
+							break;
 						case 'password':
 							// ENCRYPTION: Only encrypt if password was actually changed
 
@@ -227,7 +279,11 @@ class Wpfa_Mailconnect_SMTP {
 							}
 							break;
 						case 'number':
-							$output[ $id ] = absint( $input[ $id ] );
+							$number = absint( $input[ $id ] );
+							if ( 'email_template_max_width' === $id ) {
+								$number = min( 960, max( 320, $number ) );
+							}
+							$output[ $id ] = $number;
 							break;
 						// Add other types as needed
 					}
@@ -302,6 +358,28 @@ class Wpfa_Mailconnect_SMTP {
 				esc_attr( $id ),
 				esc_attr( $id ),
 				checked( $checked, true, false )
+			);
+		} elseif ( isset( $args['type'] ) && 'wysiwyg' === $args['type'] ) {
+			if ( class_exists( 'Wpfa_Mailconnect_Admin' ) && method_exists( 'Wpfa_Mailconnect_Admin', 'render_email_template_editor' ) ) {
+				Wpfa_Mailconnect_Admin::render_email_template_editor( $id, $value );
+			} else {
+				wp_editor(
+					$value,
+					'smtp_options_' . $id,
+					array(
+						'textarea_name' => 'smtp_options[' . $id . ']',
+						'textarea_rows' => 6,
+						'media_buttons' => false,
+						'teeny'         => true,
+					)
+				);
+			}
+		} elseif ( isset( $args['type'] ) && 'color' === $args['type'] ) {
+			printf(
+				'<input type="color" id="%s" name="smtp_options[%s]" value="%s" />',
+				esc_attr( $id ),
+				esc_attr( $id ),
+				esc_attr( $value )
 			);
 		} else {
 			// text/password/number
@@ -434,6 +512,153 @@ class Wpfa_Mailconnect_SMTP {
 			<?php submit_button( __( 'Send Test Email', 'wpfa-mailconnect' ), 'secondary', 'smtp_send_test_button' ); ?>
 		</form>
 		<?php
+	}
+
+	/**
+	 * Wraps outgoing email content with the configured HTML template.
+	 *
+	 * @param array $args The wp_mail arguments.
+	 * @return array Modified wp_mail arguments.
+	 */
+	public function apply_html_template( $args ) {
+		$options = get_option( 'smtp_options', array() );
+		$enabled = isset( $options['enable_html_template'] ) && '1' === (string) $options['enable_html_template'];
+
+		if ( ! $enabled || empty( $args['message'] ) ) {
+			return $args;
+		}
+
+		if ( false !== strpos( (string) $args['message'], '<!-- wpfa-mailconnect-template -->' ) ) {
+			return $args;
+		}
+
+		$is_html = $this->mail_args_are_html( $args );
+		$body    = $is_html ? (string) $args['message'] : wpautop( esc_html( (string) $args['message'] ) );
+
+		$template_data = array(
+			'header'                   => isset( $options['email_template_header'] ) ? $options['email_template_header'] : get_bloginfo( 'name' ),
+			'body'                     => $body,
+			'footer'                   => isset( $options['email_template_footer'] ) ? $options['email_template_footer'] : '',
+			'primary_color'            => isset( $options['email_template_primary_color'] ) ? $options['email_template_primary_color'] : '#2563eb',
+			'background_color'         => isset( $options['email_template_background_color'] ) ? $options['email_template_background_color'] : '#f4f7fb',
+			'content_background_color' => isset( $options['email_template_content_background_color'] ) ? $options['email_template_content_background_color'] : '#ffffff',
+			'max_width'                => isset( $options['email_template_max_width'] ) ? absint( $options['email_template_max_width'] ) : 640,
+			'site_name'                => get_bloginfo( 'name' ),
+		);
+
+		$args['message'] = $this->render_default_email_template( $template_data );
+		$args['headers'] = $this->ensure_html_content_type_header( isset( $args['headers'] ) ? $args['headers'] : array() );
+
+		return $args;
+	}
+
+	/**
+	 * Renders the default email template file.
+	 *
+	 * @param array $data Template data.
+	 * @return string Rendered template HTML.
+	 */
+	private function render_default_email_template( $data ) {
+		$template_file = plugin_dir_path( dirname( __FILE__ ) ) . 'templates/default-email.php';
+
+		if ( ! file_exists( $template_file ) ) {
+			return $data['body'];
+		}
+
+		ob_start();
+		$header                   = $data['header'];
+		$body                     = $data['body'];
+		$footer                   = $data['footer'];
+		$primary_color            = $data['primary_color'];
+		$background_color         = $data['background_color'];
+		$content_background_color = $data['content_background_color'];
+		$max_width                = min( 960, max( 320, absint( $data['max_width'] ) ) );
+		$site_name                = $data['site_name'];
+		include $template_file;
+		return ob_get_clean();
+	}
+
+	/**
+	 * Determines whether wp_mail arguments already indicate HTML content.
+	 *
+	 * @param array $args The wp_mail arguments.
+	 * @return bool
+	 */
+	private function mail_args_are_html( $args ) {
+		$headers = isset( $args['headers'] ) ? $args['headers'] : array();
+		if ( is_array( $headers ) ) {
+			$headers = implode( "\n", $headers );
+		}
+
+		if ( false !== stripos( (string) $headers, 'Content-Type: text/html' ) ) {
+			return true;
+		}
+
+		return (bool) preg_match( '/<\/?[a-z][\s\S]*>/i', (string) $args['message'] );
+	}
+
+	/**
+	 * Ensures HTML content type is passed to wp_mail.
+	 *
+	 * @param mixed $headers Existing headers.
+	 * @return mixed Headers with HTML content type.
+	 */
+	private function ensure_html_content_type_header( $headers ) {
+		$html_content_type = 'Content-Type: text/html; charset=UTF-8';
+
+		if ( empty( $headers ) ) {
+			return array( $html_content_type );
+		}
+
+		if ( is_array( $headers ) ) {
+			$filtered_headers   = array();
+			$has_html_type      = false;
+			$has_content_type   = false;
+
+			foreach ( $headers as $header ) {
+				if ( 0 === stripos( (string) $header, 'Content-Type:' ) ) {
+					$has_content_type = true;
+
+					if ( false !== stripos( (string) $header, 'text/html' ) ) {
+						$has_html_type      = true;
+						$filtered_headers[] = $header;
+					}
+
+					continue;
+				}
+
+				$filtered_headers[] = $header;
+			}
+
+			if ( ! $has_html_type ) {
+				$filtered_headers[] = $html_content_type;
+			}
+
+			return $filtered_headers;
+		}
+
+		$header_lines      = preg_split( '/\r\n|\r|\n/', (string) $headers );
+		$filtered_lines    = array();
+		$has_html_type     = false;
+
+		foreach ( $header_lines as $header_line ) {
+			if ( 0 === stripos( $header_line, 'Content-Type:' ) ) {
+				if ( false !== stripos( $header_line, 'text/html' ) ) {
+					$has_html_type   = true;
+					$filtered_lines[] = $header_line;
+				}
+
+				continue;
+			}
+
+			$filtered_lines[] = $header_line;
+		}
+
+		if ( ! $has_html_type ) {
+			$filtered_lines[] = $html_content_type;
+		}
+
+		return trim( implode( "\n", array_filter( $filtered_lines, 'strlen' ) ) );
 	}
 
 

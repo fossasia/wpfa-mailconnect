@@ -159,7 +159,7 @@ class Wpfa_Mailconnect {
 		 * The class responsible for consolidated email logging service.
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-wpfa-mailconnect-email-logger-service.php';
-	
+
         /**
          * The class responsible for database schema versioning and migration.
          */
@@ -169,6 +169,11 @@ class Wpfa_Mailconnect {
 		 * The class responsible for SMTP settings and functionality
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-wpfa-mailconnect-smtp.php';
+
+		/**
+		 * The interface future provider adapters must implement.
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/interface-wpfa-mailconnect-provider.php';
 
 		/**
 		 * The class responsible for encryption utilities.
@@ -217,6 +222,7 @@ class Wpfa_Mailconnect {
 		$this->loader->add_action( 'admin_init', $this->smtp, 'settings_init' );
 		$this->loader->add_action( 'admin_post_smtp_send_test', $this->smtp, 'handle_test_email' );
 		$this->loader->add_action( 'phpmailer_init', $this->smtp, 'phpmailer_override' );
+		$this->loader->add_filter( 'wp_mail', $this->smtp, 'apply_html_template', 5, 1 );
 
 		// Initialize and register the consolidated email logging service (v1.2.1)
 		// This replaces the old scattered logging hooks for better maintainability
