@@ -31,14 +31,12 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 /**
- * Currently plugin version.
- * Updated to version 1.2.0 to include deterministic logging and status lifecycle.
+ * Current plugin version.
  */
 define( 'WPFA_MAILCONNECT_VERSION', '1.3.0' );
 
 /**
  * Defines the required database schema version.
-* Updated to 1.2.0 to trigger dbDelta for the new 'hash' column and UNIQUE index.
  */
 define( 'WPFA_MAILCONNECT_DB_VERSION', '1.3.0' );
 

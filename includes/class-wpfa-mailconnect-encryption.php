@@ -8,7 +8,7 @@
  * uses AES-256-GCM for authenticated encryption (confidentiality and integrity).
  *
  * @link       https://fossasia.org
- * @since      1.2.0
+ * @since      1.0.0
  * @package    Wpfa_Mailconnect
  * @subpackage Wpfa_Mailconnect/includes
  */
@@ -28,7 +28,7 @@
  * Do NOT change the component ordering without implementing a migration path,
  * as it will break decryption of all existing encrypted passwords.
  *
- * @since      1.2.0
+ * @since      1.0.0
  * @package    Wpfa_Mailconnect
  * @subpackage Wpfa_Mailconnect/includes
  * @author     FOSSASIA <info@fossasia.org>
@@ -40,21 +40,21 @@ class Wpfa_Mailconnect_Encryption {
 	 *
 	 * Note: Must be lowercase for OpenSSL functions.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 */
 	const CIPHER_METHOD = 'aes-256-gcm';
 
 	/**
 	 * Length of the authentication tag in bytes (128 bits) for AES-GCM.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 */
 	const TAG_LENGTH = 16;
 
 	/**
 	 * Prefix to identify encrypted values.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 */
 	const ENCRYPTED_PREFIX = 'wpfa_enc_';
 
@@ -64,7 +64,7 @@ class Wpfa_Mailconnect_Encryption {
 	 * Uses OpenSSL with AES-256-GCM authenticated encryption and WordPress salts for the key.
 	 * The output is IV + Authentication Tag + Ciphertext, Base64 encoded.
 	 *
-	 * @since  1.2.0
+	 * @since  1.0.0
 	 * @param  string $value The plain text value to encrypt.
 	 * @return string        The encrypted value with prefix, or original value if encryption fails.
 	 */
@@ -153,7 +153,7 @@ class Wpfa_Mailconnect_Encryption {
 	/**
 	 * Decrypts an authenticated encrypted string value using AES-256-GCM.
 	 *
-	 * @since  1.2.0
+	 * @since  1.0.0
 	 * @param  string $value The encrypted value (with prefix).
 	 * @return string        The decrypted plain text value, or original if not encrypted/decryption fails.
 	 */
@@ -241,7 +241,7 @@ class Wpfa_Mailconnect_Encryption {
 	 *
 	 * Legacy format: base64_iv:base64_ciphertext
 	 *
-	 * @since  				1.2.0
+	 * @since  				1.0.0
 	 * @param  string $data The value to check.
 	 * @return bool         True if appears to be legacy format.
 	 */
@@ -297,7 +297,7 @@ class Wpfa_Mailconnect_Encryption {
 	 * padding oracle attacks. This method exists only for migration compatibility.
 	 * Administrators should re-save credentials to upgrade to GCM encryption.
 	 *
-	 * @since  1.2.0
+	 * @since  1.0.0
 	 * @param  string $data The encrypted string.
 	 * @return string The decrypted string, or the original string on failure.
 	 */
@@ -336,7 +336,7 @@ class Wpfa_Mailconnect_Encryption {
 	/**
 	 * Checks if a value is encrypted.
 	 *
-	 * @since  1.2.0
+	 * @since  1.0.0
 	 * @param  string $value The value to check.
 	 * @return bool          True if encrypted, false otherwise.
 	 */
@@ -351,7 +351,7 @@ class Wpfa_Mailconnect_Encryption {
 	 * and combine it with available WordPress salts/keys to create a unique,
 	 * site-specific encryption key.
 	 *
-	 * @since  1.2.0
+	 * @since  1.0.0
 	 * @return string The encryption key.
 	 */
 	private static function get_encryption_key() {
@@ -423,7 +423,7 @@ class Wpfa_Mailconnect_Encryption {
 	 *
 	 * Uses random_bytes() (PHP 7+) if available, falling back to openssl_random_pseudo_bytes().
 	 *
-	 * @since 			1.2.0
+	 * @since 			1.0.0
 	 * @param int 		$length The number of random bytes to generate.
 	 * @return string|false The random bytes, or false on failure.
 	 */

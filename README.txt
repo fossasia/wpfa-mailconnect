@@ -4,7 +4,7 @@ Donate link: https://fossasia.org/
 Tags: comments, spam
 Requires at least: 3.0.1
 Tested up to: 3.4
-Stable tag: 4.3
+Stable tag: 1.0.0
 License: Apache2.0 or later
 License URI: http://www.apache.org/licenses/
 
@@ -67,9 +67,8 @@ directory take precedence. For example, `/assets/screenshot-1.png` would win ove
 
 == Changelog ==
 
-= 1.0 =
-* A change since the previous version.
-* Another change.
+= 1.0.0 =
+* Initial stable release.
 
 = 0.5 =
 * List versions from most recent at top to oldest at bottom.
