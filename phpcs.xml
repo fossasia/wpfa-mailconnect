@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<ruleset name="WPFA Mail Connect">
+  <description>WordPress Coding Standards for WPFA Mail Connect plugin.</description>
+
+  <!-- Include WordPress Coding Standards -->
+  <rule ref="WordPress"/>
+    
+  <!-- WordPress-specific config -->
+  <config name="minimum_supported_wp_version" value="5.0"/>
+    
+  <!-- Arguments for PHPCS -->
+  <arg value="sp"/>
+  <arg name="extensions" value="php"/>
+  <arg name="colors"/>
+  <arg name="parallel" value="8"/>
+
+  <!-- What to scan -->
+  <file>.</file>
+    
+  <!-- Exclude patterns -->
+  <exclude-pattern>*/vendor/*</exclude-pattern>
+  <exclude-pattern>*/node_modules/*</exclude-pattern>
+</ruleset>
