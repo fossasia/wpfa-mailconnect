@@ -93,7 +93,7 @@ class Wpfa_Mailconnect_Admin {
 	/**
 	 * Renders a compact WordPress visual editor for template settings.
 	 *
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 * @param string $field_id The smtp_options field id.
 	 * @param string $value The current editor value.
 	 * @return void
@@ -427,7 +427,7 @@ class Wpfa_Mailconnect_Admin {
 	/**
 	 * Formats safe attachment metadata from a log entry.
 	 *
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 * @param string $status_details JSON status details.
 	 * @return string Human-readable attachment summary.
 	 */

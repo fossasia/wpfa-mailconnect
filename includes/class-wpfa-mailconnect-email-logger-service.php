@@ -318,7 +318,7 @@ class Wpfa_Mailconnect_Email_Logger_Service {
 	/**
 	 * Builds safe attachment metadata for logs.
 	 *
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 * @param mixed $attachments The wp_mail attachments argument.
 	 * @return array Attachment presence and count only.
 	 */

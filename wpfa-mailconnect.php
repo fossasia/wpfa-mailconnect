@@ -16,7 +16,7 @@
  * Plugin Name:       FOSSASIA Mail Connect
  * Plugin URI:        https://github.com/fossasia/wpfa-mailconnect
  * Description:       A helper plugin to assist Wordpress to connect to your mail and send and receive emails.
- * Version:           1.3.0
+ * Version:           1.0.0
  * Author:            FOSSASIA
  * Author URI:        https://fossasia.org/
  * License:           GPL-2.0+
@@ -33,12 +33,12 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Current plugin version.
  */
-define( 'WPFA_MAILCONNECT_VERSION', '1.3.0' );
+define( 'WPFA_MAILCONNECT_VERSION', '1.0.0' );
 
 /**
  * Defines the required database schema version.
  */
-define( 'WPFA_MAILCONNECT_DB_VERSION', '1.3.0' );
+define( 'WPFA_MAILCONNECT_DB_VERSION', '1.0.0' );
 
 /**
  * The code that runs during plugin activation.

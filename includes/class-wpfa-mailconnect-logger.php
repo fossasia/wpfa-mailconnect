@@ -124,7 +124,7 @@ class Wpfa_Mailconnect_Logger {
 	/**
 	 * Generates a deterministic hash for a wp_mail payload.
 	 *
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 * @param array $args The wp_mail arguments array.
 	 * @return string MD5 hash of normalized mail content.
 	 */
@@ -153,7 +153,7 @@ class Wpfa_Mailconnect_Logger {
 	/**
 	 * Builds safe attachment metadata for deterministic hashing.
 	 *
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 * @param mixed $attachments The wp_mail attachments argument.
 	 * @return array Safe attachment metadata for hashing.
 	 */
