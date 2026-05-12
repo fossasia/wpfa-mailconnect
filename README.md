@@ -4,6 +4,8 @@ A WordPress plugin scaffold by FOSSASIA to integrate email connectivity into sit
 It ships with a standard, maintainable structure (`admin/`, `includes/`, `public/`, `languages/`) and an uninstall routine, ready for adding SMTP/API providers, settings screens, and helper functions.
 Licensed under Apache-2.0.
 
+Current stable release: **1.0.0**.
+
 ## Features
 
 Current repository status: minimal plugin skeleton prepared for adding mail connectivity features.

@@ -78,7 +78,7 @@ class Wpfa_Mailconnect {
 	/**
 	 * Email Logger Service instance.
 	 *
-	 * @since    1.2.1
+	 * @since    1.0.0
 	 * @access   protected
 	 * @var      Wpfa_Mailconnect_Email_Logger_Service    $email_logger_service    Handles consolidated email logging.
 	 */
@@ -97,8 +97,7 @@ class Wpfa_Mailconnect {
 		if ( defined( 'WPFA_MAILCONNECT_VERSION' ) ) {
 			$this->version = WPFA_MAILCONNECT_VERSION;
 		} else {
-			// Updated to 1.2.0 to reflect advanced logging columns and features.
-			$this->version = '1.2.0';
+			$this->version = '1.0.0';
 		}
 		$this->plugin_name = 'wpfa-mailconnect';
 

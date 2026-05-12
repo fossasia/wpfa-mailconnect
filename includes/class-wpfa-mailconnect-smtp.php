@@ -8,7 +8,7 @@
  *
  * @author Ubayed Bin Sufian
  * @since 1.0.0
- * @version 1.2.1 (Removed scattered logging hooks - now handled by Email Logger Service)
+ * @version 1.0.0 (Removed scattered logging hooks - now handled by Email Logger Service)
  */
 class Wpfa_Mailconnect_SMTP {
 
