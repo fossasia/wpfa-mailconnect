@@ -200,30 +200,13 @@ class Wpfa_Mailconnect_Admin {
 				<p><?php esc_html_e( 'Configure SMTP delivery, monitor outgoing email activity, and keep WordPress mail workflows visible from one place.', 'wpfa-mailconnect' ); ?></p>
 			</div>
 
-			<div class="wpfa-mailconnect-dashboard__grid">
-				<div class="wpfa-mailconnect-dashboard__panel">
-					<h2><?php esc_html_e( 'Get Started', 'wpfa-mailconnect' ); ?></h2>
-					<ol>
-						<li><?php esc_html_e( 'Add your SMTP host, port, authentication, and sender details.', 'wpfa-mailconnect' ); ?></li>
-						<li><?php esc_html_e( 'Send a test email to confirm delivery.', 'wpfa-mailconnect' ); ?></li>
-						<li><?php esc_html_e( 'Review email logs to troubleshoot delivery status.', 'wpfa-mailconnect' ); ?></li>
-					</ol>
-				</div>
-
-				<div class="wpfa-mailconnect-dashboard__panel wpfa-mailconnect-dashboard__panel--quicklinks">
-					<h2><?php esc_html_e( 'Quick Links', 'wpfa-mailconnect' ); ?></h2>
-					<p>
-						<a class="button button-primary" href="<?php echo esc_url( admin_url( 'admin.php?page=smtp-config' ) ); ?>">
-							<?php esc_html_e( 'SMTP Settings', 'wpfa-mailconnect' ); ?>
-						</a>
-						<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=wpfa-mail-logs' ) ); ?>">
-							<?php esc_html_e( 'Email Logs', 'wpfa-mailconnect' ); ?>
-						</a>
-						<a class="button" href="<?php echo esc_url( 'https://github.com/fossasia/wpfa-mailconnect' ); ?>" target="_blank" rel="noopener noreferrer">
-							<?php esc_html_e( 'Documentation', 'wpfa-mailconnect' ); ?>
-						</a>
-					</p>
-				</div>
+			<div class="wpfa-mailconnect-dashboard__panel">
+				<h2><?php esc_html_e( 'Get Started', 'wpfa-mailconnect' ); ?></h2>
+				<ol>
+					<li><?php esc_html_e( 'Add your SMTP host, port, authentication, and sender details.', 'wpfa-mailconnect' ); ?></li>
+					<li><?php esc_html_e( 'Send a test email to confirm delivery.', 'wpfa-mailconnect' ); ?></li>
+					<li><?php esc_html_e( 'Review email logs to troubleshoot delivery status.', 'wpfa-mailconnect' ); ?></li>
+				</ol>
 			</div>
 		</div>
 		<?php
