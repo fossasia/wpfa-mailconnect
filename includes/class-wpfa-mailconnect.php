@@ -78,7 +78,7 @@ class Wpfa_Mailconnect {
 	/**
 	 * Email Logger Service instance.
 	 *
-	 * @since    1.2.1
+	 * @since    1.0.0
 	 * @access   protected
 	 * @var      Wpfa_Mailconnect_Email_Logger_Service    $email_logger_service    Handles consolidated email logging.
 	 */
@@ -106,8 +106,7 @@ class Wpfa_Mailconnect {
 		if ( defined( 'WPFA_MAILCONNECT_VERSION' ) ) {
 			$this->version = WPFA_MAILCONNECT_VERSION;
 		} else {
-			// Updated to 1.2.0 to reflect advanced logging columns and features.
-			$this->version = '1.2.0';
+			$this->version = '1.0.0';
 		}
 		$this->plugin_name = 'wpfa-mailconnect';
 
@@ -228,7 +227,7 @@ class Wpfa_Mailconnect {
 		// instantiate smtp manager and register its hooks
 		$this->smtp = new Wpfa_Mailconnect_SMTP( $this->get_plugin_name(), $this->get_version() );
 
-		$this->loader->add_action( 'admin_menu', $this->smtp, 'register_admin_menu' );
+		$this->loader->add_action( 'admin_menu', $plugin_admin, 'register_admin_menu' );
 		$this->loader->add_action( 'admin_init', $this->smtp, 'settings_init' );
 		$this->loader->add_action( 'admin_post_smtp_send_test', $this->smtp, 'handle_test_email' );
 		$this->loader->add_action( 'phpmailer_init', $this->smtp, 'phpmailer_override' );

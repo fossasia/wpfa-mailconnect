@@ -8,7 +8,7 @@
  *
  * @author Ubayed Bin Sufian
  * @since 1.0.0
- * @version 1.2.1 (Removed scattered logging hooks - now handled by Email Logger Service)
+ * @version 1.0.0 (Removed scattered logging hooks - now handled by Email Logger Service)
  */
 class Wpfa_Mailconnect_SMTP {
 
@@ -81,21 +81,16 @@ class Wpfa_Mailconnect_SMTP {
 		$this->queue  = new Wpfa_Mailconnect_Queue( $this->logger );
 	}
 
-	/* --- Admin menu / settings registration --- */
-
 	/**
-	 * Register the plugin options page under Settings.
+	 * Renders the settings page when registered from the shared admin menu.
 	 *
 	 * @return void
 	 */
-	public function register_admin_menu() {
-		add_options_page(
-			__( 'SMTP Email Settings', 'wpfa-mailconnect' ),
-			__( 'SMTP Config', 'wpfa-mailconnect' ),
-			'manage_options',
-			'smtp-config',
-			array( $this, 'render_settings_page' )
-		);
+	public static function render_settings_page_static() {
+		$version = defined( 'WPFA_MAILCONNECT_VERSION' ) ? WPFA_MAILCONNECT_VERSION : '1.0.0';
+		$smtp    = new self( 'wpfa-mailconnect', $version );
+
+		$smtp->render_settings_page();
 	}
 
 	/**
@@ -382,8 +377,8 @@ class Wpfa_Mailconnect_SMTP {
 		}
 		?>
 		<div class="wrap">
+			<?php Wpfa_Mailconnect_Admin::render_back_to_mail_connect_link(); ?>
 			<h1><?php esc_html_e( 'SMTP Email Configuration', 'wpfa-mailconnect' ); ?></h1>
-			<?php settings_errors(); ?>
 
 			<form method="post" action="options.php">
 				<?php
