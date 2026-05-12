@@ -1,11 +1,11 @@
 /**
- * FOSSASIA Mail Connect — WordPress admin styles.
- *
- * Dashboard (Mail Connect landing): hero band, eyebrow label, introductory copy,
- * and responsive grid/panels for setup steps and quick links.
- *
- * Accent colors follow the FOSSASIA artwork palette (fossasia/fossasia-artwork Readme):
- * Rosso Corsa #d40000, Gray #777777, White #ffffff.
+ * All of the CSS for your admin-specific functionality should be
+ * included in this file.
+ */
+
+/**
+ * Admin-specific styles for FOSSASIA Mail Connect dashboard.
+ * Uses FOSSASIA brand colors.
  */
 
 .wpfa-mailconnect-dashboard {
@@ -70,4 +70,34 @@
 
 .wpfa-mailconnect-dashboard__panel .button {
 	margin: 0 8px 8px 0;
+}
+
+.wpfa-mailconnect-dashboard__panel--quicklinks .button.button-primary {
+	background: #d40000;
+	border-color: #d40000;
+	box-shadow: none;
+	color: #ffffff;
+	text-shadow: none;
+}
+
+.wpfa-mailconnect-dashboard__panel--quicklinks .button.button-primary:hover,
+.wpfa-mailconnect-dashboard__panel--quicklinks .button.button-primary:focus {
+	background: #b80000;
+	border-color: #b80000;
+	color: #ffffff;
+}
+
+.wpfa-mailconnect-dashboard__panel--quicklinks .button:not(.button-primary) {
+	background: #777777;
+	border-color: #777777;
+	box-shadow: none;
+	color: #ffffff;
+	text-shadow: none;
+}
+
+.wpfa-mailconnect-dashboard__panel--quicklinks .button:not(.button-primary):hover,
+.wpfa-mailconnect-dashboard__panel--quicklinks .button:not(.button-primary):focus {
+	background: #5f5f5f;
+	border-color: #5f5f5f;
+	color: #ffffff;
 }
