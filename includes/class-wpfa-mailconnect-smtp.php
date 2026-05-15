@@ -36,6 +36,13 @@ class Wpfa_Mailconnect_SMTP {
 	private $logger;
 
 	/**
+	 * Queue manager instance.
+	 *
+	 * @var Wpfa_Mailconnect_Queue
+	 */
+	private $queue;
+
+	/**
 	 * Stores the error capture handler closure for later removal.
 	 *
 	 * @since 1.0.0
@@ -64,6 +71,7 @@ class Wpfa_Mailconnect_SMTP {
 			'smtp_port' 	 	 => array( 'label' => 'SMTP Port', 'default' => '587', 'type' => 'number' ),
 			'smtp_secure' 	 	 => array( 'label' => 'Encryption', 'default' => 'tls', 'type' => 'select', 'options' => array( 'tls' => 'TLS (Recommended)', 'ssl' => 'SSL', '' => 'None' ) ),
 			'smtp_auth' 	 	 => array( 'label' => 'Authentication Required?', 'default' => '1', 'type' => 'select', 'options' => array( '1' => 'Yes', '0' => 'No' ) ),
+			'enable_email_queue' => array( 'label' => 'Enable Email Queuing', 'default' => '0', 'type' => 'checkbox', 'description' => 'Queue outgoing emails for background delivery with WP Cron.' ),
 			'enable_html_template' => array( 'label' => 'Enable HTML Email Template', 'default' => '0', 'type' => 'checkbox', 'description' => 'Wrap outgoing WordPress emails in the configured HTML template.' ),
 			'email_template_header' => array( 'label' => 'Template Header', 'default' => get_bloginfo( 'name' ), 'type' => 'wysiwyg', 'description' => 'Content displayed above each email body.' ),
 			'email_template_footer' => array( 'label' => 'Template Footer', 'default' => sprintf( __( 'Sent by %s', 'wpfa-mailconnect' ), get_bloginfo( 'name' ) ), 'type' => 'wysiwyg', 'description' => 'Content displayed below each email body.' ),
@@ -77,6 +85,7 @@ class Wpfa_Mailconnect_SMTP {
 
 		// Initialize logger for cleanup operations
 		$this->logger = new Wpfa_Mailconnect_Logger();
+		$this->queue  = new Wpfa_Mailconnect_Queue( $this->logger );
 	}
 
 	/**
@@ -113,7 +122,7 @@ class Wpfa_Mailconnect_SMTP {
 		// Register core SMTP fields
 		foreach ( $this->fields as $id => $args ) {
 			// Skip logging fields in the main section
-			if ( 'enable_log' === $id || 'log_retention_days' === $id || 0 === strpos( $id, 'email_template_' ) || 'enable_html_template' === $id ) {
+			if ( 'enable_log' === $id || 'log_retention_days' === $id || 'enable_email_queue' === $id || 0 === strpos( $id, 'email_template_' ) || 'enable_html_template' === $id ) {
 				continue;
 			}
 			add_settings_field(
@@ -150,6 +159,23 @@ class Wpfa_Mailconnect_SMTP {
 			'smtp-config',
 			'smtp_logging_section',
 			array_merge( $this->fields['log_retention_days'], array( 'id' => 'log_retention_days' ) )
+		);
+
+		// Email Queue Section
+		add_settings_section(
+			'smtp_queue_section',
+			__( 'Email Queue', 'wpfa-mailconnect' ),
+			array( $this, 'queue_section_callback' ),
+			'smtp-config'
+		);
+
+		add_settings_field(
+			'enable_email_queue',
+			$this->fields['enable_email_queue']['label'],
+			array( $this, 'render_field' ),
+			'smtp-config',
+			'smtp_queue_section',
+			array_merge( $this->fields['enable_email_queue'], array( 'id' => 'enable_email_queue' ) )
 		);
 
 		// HTML Email Template Section
@@ -207,6 +233,15 @@ class Wpfa_Mailconnect_SMTP {
 	 */
 	public function logging_section_callback() {
 		echo '<p>' . esc_html__( 'Control how emails are logged and manage data retention.', 'wpfa-mailconnect' ) . '</p>';
+	}
+
+	/**
+	 * Callback for the queue settings section description.
+	 *
+	 * @return void
+	 */
+	public function queue_section_callback() {
+		echo '<p>' . esc_html__( 'When enabled, wp_mail calls are saved quickly and delivered later by the WP Cron queue processor.', 'wpfa-mailconnect' ) . '</p>';
 	}
 
 	/**
@@ -288,6 +323,14 @@ class Wpfa_Mailconnect_SMTP {
 						// Add other types as needed
 					}
 				}
+			}
+		}
+
+		if ( class_exists( 'Wpfa_Mailconnect_Queue' ) ) {
+			if ( isset( $output['enable_email_queue'] ) && '1' === (string) $output['enable_email_queue'] ) {
+				Wpfa_Mailconnect_Queue::schedule_processing();
+			} else {
+				Wpfa_Mailconnect_Queue::unschedule_processing();
 			}
 		}
 
@@ -512,6 +555,31 @@ class Wpfa_Mailconnect_SMTP {
 			<?php submit_button( __( 'Send Test Email', 'wpfa-mailconnect' ), 'secondary', 'smtp_send_test_button' ); ?>
 		</form>
 		<?php
+	}
+
+	/**
+	 * Queues outgoing email before WordPress starts synchronous delivery.
+	 *
+	 * @param null|bool $pre Whether to short-circuit wp_mail.
+	 * @param array     $args The wp_mail arguments.
+	 * @return null|bool True when queued, original value otherwise.
+	 */
+	public function queue_email( $pre, $args ) {
+		$options = get_option( 'smtp_options', array() );
+		$enabled = isset( $options['enable_email_queue'] ) && '1' === (string) $options['enable_email_queue'];
+
+		if ( ! $enabled || Wpfa_Mailconnect_Queue::is_processing() ) {
+			return $pre;
+		}
+
+		$queued_id = $this->queue->add_to_queue( $args );
+
+		if ( $queued_id ) {
+			Wpfa_Mailconnect_Queue::schedule_processing();
+			return true;
+		}
+
+		return $pre;
 	}
 
 	/**

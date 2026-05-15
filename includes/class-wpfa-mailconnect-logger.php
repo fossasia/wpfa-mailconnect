@@ -28,7 +28,7 @@ class Wpfa_Mailconnect_Logger {
      *
      * @since 1.0.0
      */
-    const ALLOWED_STATUSES = array( 'pending', 'success', 'failed' );
+    const ALLOWED_STATUSES = array( 'pending', 'queued', 'success', 'failed' );
 	
 	/**
 	 * The name of the database table for email logs.

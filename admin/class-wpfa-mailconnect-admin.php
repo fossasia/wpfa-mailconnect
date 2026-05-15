@@ -272,6 +272,8 @@ class Wpfa_Mailconnect_Admin {
 			<?php self::render_back_to_mail_connect_link(); ?>
 			<h1><?php esc_html_e( 'Email Logs', 'wpfa-mailconnect' ); ?></h1>
 
+			<?php $this->render_queue_status_widget(); ?>
+
 			<?php 
 			// SECURE FIX: Check for the success transient instead of a URL parameter.
 			$logs_cleared = get_transient( 'wpfa_mailconnect_logs_cleared' );
@@ -309,6 +311,7 @@ class Wpfa_Mailconnect_Admin {
 					<option value=""><?php esc_html_e( 'All Statuses', 'wpfa-mailconnect' ); ?></option>
 					<!-- UPDATE: Add 'pending' status option -->
 					<option value="pending" <?php selected( $filter_status, 'pending' ); ?>><?php esc_html_e( 'Pending', 'wpfa-mailconnect' ); ?></option>
+					<option value="queued" <?php selected( $filter_status, 'queued' ); ?>><?php esc_html_e( 'Queued', 'wpfa-mailconnect' ); ?></option>
 					<option value="success" <?php selected( $filter_status, 'success' ); ?>><?php esc_html_e( 'Success', 'wpfa-mailconnect' ); ?></option>
 					<option value="failed" <?php selected( $filter_status, 'failed' ); ?>><?php esc_html_e( 'Failed', 'wpfa-mailconnect' ); ?></option>
 				</select>
@@ -339,6 +342,8 @@ class Wpfa_Mailconnect_Admin {
 							$row_class = 'log-success';
 							if ( 'failed' === $log->status ) {
 								$row_class = 'log-failed';
+							} elseif ( 'queued' === $log->status ) {
+								$row_class = 'log-pending';
 							} elseif ( 'pending' === $log->status ) {
 								$row_class = 'log-pending';
 							}
@@ -422,6 +427,38 @@ class Wpfa_Mailconnect_Admin {
 			)
 		);
 		exit;
+	}
+
+	/**
+	 * Renders queue status counts on the logs screen.
+	 *
+	 * @since 1.0.0
+	 * @return void
+	 */
+	private function render_queue_status_widget() {
+		if ( ! class_exists( 'Wpfa_Mailconnect_Queue' ) ) {
+			return;
+		}
+
+		$queue  = new Wpfa_Mailconnect_Queue();
+		$counts = $queue->get_status_counts();
+		?>
+		<div class="notice notice-info inline">
+			<p>
+				<strong><?php esc_html_e( 'Email Queue:', 'wpfa-mailconnect' ); ?></strong>
+				<?php
+				printf(
+					/* translators: 1: queued count, 2: processing count, 3: sent count, 4: failed count */
+					esc_html__( 'Queued: %1$d | Processing: %2$d | Sent: %3$d | Failed: %4$d', 'wpfa-mailconnect' ),
+					absint( $counts['queued'] ),
+					absint( $counts['processing'] ),
+					absint( $counts['sent'] ),
+					absint( $counts['failed'] )
+				);
+				?>
+			</p>
+		</div>
+		<?php
 	}
 
 	/**
